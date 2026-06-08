@@ -40,7 +40,7 @@ buyers_count =
 ### Fresh credit holder activation
 
 ```
-fresh_credit_holders × activation_rate =
+fresh_credit_holders =
     applicants × allocation_rate
   + rejected × second_chance_rate
   + dead_credit_holders × holder_revenant_rate

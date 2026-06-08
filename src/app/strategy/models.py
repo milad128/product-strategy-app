@@ -128,7 +128,7 @@ BUYER_FORMULAS: list[Equation] = [
     Equation(
         label="Fresh credit holder activation",
         formula=(
-            "Fresh credit holder × Activation rate = "
+            "Fresh credit holder = "
             "(Applicant × Allocation rate) + (Rejected × Second chance rate) "
             "+ (Dead credit holder × Holder revenant rate)"
         ),
