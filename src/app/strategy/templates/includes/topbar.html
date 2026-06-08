@@ -1,0 +1,10 @@
+<header class="topbar">
+  <h1>{{ page_title }}</h1>
+  <nav>
+    <a href="/" class="{% if nav_active == 'home' %}active{% endif %}">Home</a>
+    <a href="/strategy" class="{% if nav_active == 'strategy' %}active{% endif %}">Strategy</a>
+    <a href="/glossary" class="{% if nav_active == 'glossary' %}active{% endif %}">Glossary</a>
+    <a href="/lifecycle" class="{% if nav_active == 'lifecycle' %}active{% endif %}">Lifecycle</a>
+    <a href="/data-gathering" class="{% if nav_active == 'data-gathering' %}active{% endif %}">Data gathering</a>
+  </nav>
+</header>

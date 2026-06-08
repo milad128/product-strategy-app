@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BNPL User Lifecycle</title>
+  {% include 'includes/head-assets.html' %}
+  <link rel="stylesheet" href="/static/lifecycle/css/lifecycle.css" />
+</head>
+<body class="page-canvas">
+  {% include 'includes/topbar.html' %}
+
+  <main class="main main--canvas main--wide">
+    <div class="canvas-toolbar" role="toolbar" aria-label="Diagram tools">
+      <div class="canvas-toolbar__modes">
+        <button type="button" class="tool-btn is-active" data-tool="select" title="Move and resize">
+          <span class="tool-btn__icon" aria-hidden="true">↖</span>
+          Select
+        </button>
+        <button type="button" class="tool-btn" data-tool="connect" title="Draw arrows">
+          <span class="tool-btn__icon" aria-hidden="true">→</span>
+          Connect
+        </button>
+        <button type="button" class="tool-btn" data-tool="add-stage" title="Place a new stage on canvas">
+          <span class="tool-btn__icon" aria-hidden="true">+</span>
+          Add stage
+        </button>
+      </div>
+      <div class="canvas-toolbar__arrow-types" id="arrow-type-picker" aria-label="Arrow type">
+        <span class="toolbar-label">Arrow</span>
+        <button type="button" class="tool-btn tool-btn--compact" data-arrow-type="straight">Straight</button>
+        <button type="button" class="tool-btn tool-btn--compact is-active" data-arrow-type="bent">Bent</button>
+      </div>
+      <div class="canvas-toolbar__shapes" id="stage-shape-picker" aria-label="Stage shape">
+        <span class="toolbar-label">Shape</span>
+        <button type="button" class="tool-btn tool-btn--compact is-active" data-stage-shape="rectangle" title="Rectangle stage">▭</button>
+        <button type="button" class="tool-btn tool-btn--compact" data-stage-shape="circle" title="Circle stage">○</button>
+      </div>
+      <div class="canvas-toolbar__actions">
+        <button type="button" class="tool-btn tool-btn--secondary" id="btn-present" title="Open read-only presentation in a new tab">Present</button>
+        <button type="button" class="tool-btn tool-btn--secondary" id="btn-delete-conn" disabled>Delete arrow</button>
+        <button type="button" class="tool-btn tool-btn--secondary" id="btn-delete-stage" disabled>Delete stage</button>
+        <button type="button" class="tool-btn tool-btn--primary" id="btn-save">Save</button>
+      </div>
+    </div>
+
+    <div class="canvas-properties" id="canvas-properties">
+      <div class="properties-row" id="props-stage" hidden>
+        <label class="properties-label" for="stage-name-input">Stage name</label>
+        <input
+          type="text"
+          id="stage-name-input"
+          class="properties-input"
+          placeholder="Stage name"
+          autocomplete="off"
+        />
+      </div>
+      <div class="properties-row" id="props-arrow" hidden>
+        <label class="properties-label" for="conn-label-input">Arrow label</label>
+        <input
+          type="text"
+          id="conn-label-input"
+          class="properties-input"
+          placeholder="Arrow label"
+          autocomplete="off"
+        />
+      </div>
+    </div>
+
+    <div class="save-toast" id="save-toast" role="status" hidden>Saved to database.</div>
+
+    <p class="canvas-hint" id="mode-hint"></p>
+
+    <div class="canvas-board" id="canvas-board">
+      <div class="canvas-board__inner">
+        <div class="canvas-groups" id="canvas-groups"></div>
+        <div class="canvas-group-resize" id="canvas-group-resize"></div>
+        <svg class="canvas-svg" id="canvas-svg" aria-hidden="true"></svg>
+        <div class="canvas-labels" id="canvas-labels" aria-hidden="true"></div>
+        <div class="canvas-nodes" id="canvas-nodes"></div>
+        <div class="canvas-handles" id="canvas-handles"></div>
+        <div class="canvas-board-resize" id="canvas-board-resize"></div>
+      </div>
+    </div>
+
+    <p class="updated-at" id="updated-at"></p>
+  </main>
+
+  <script src="/static/lifecycle/js/shared.js"></script>
+  <script src="/static/lifecycle/js/canvas-editor.js"></script>
+</body>
+</html>

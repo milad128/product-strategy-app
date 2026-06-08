@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glossary — BNPL (Unsecured)</title>
+  {% include 'includes/head-assets.html' %}
+</head>
+<body>
+  {% include 'includes/topbar.html' %}
+
+  <main class="main">
+    <div class="page-header">
+      <h2>
+        Glossary
+        <span class="badge badge-active">v1</span>
+      </h2>
+      <p class="subtitle">Terms and definitions for BNPL (Unsecured) metrics</p>
+    </div>
+
+    <section>
+      <div class="card" style="padding: 0;">
+        <table class="glossary-table">
+          <thead>
+            <tr>
+              <th>Term</th>
+              <th>Definition</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in glossary %}
+            <tr>
+              <td>{{ item.term }}</td>
+              <td>{{ item.definition }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="page-footer">
+      Definitions are documented in <code>docs/domain/metrics/glossary.md</code>.
+      Product: BNPL (Unsecured) · Version 1
+    </footer>
+  </main>
+</body>
+</html>

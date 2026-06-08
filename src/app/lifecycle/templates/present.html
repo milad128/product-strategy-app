@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BNPL User Lifecycle — Presentation</title>
+  {% include 'includes/head-assets.html' %}
+  <link rel="stylesheet" href="/static/lifecycle/css/lifecycle.css" />
+</head>
+<body class="page-present">
+  <main class="present-main">
+    <div class="canvas-board present-board" id="canvas-board" title="Double-click for fullscreen">
+      <div class="present-scaler" id="present-scaler">
+        <div class="canvas-board__inner">
+          <div class="canvas-groups" id="canvas-groups"></div>
+          <svg class="canvas-svg" id="canvas-svg" aria-hidden="true"></svg>
+          <div class="canvas-labels" id="canvas-labels" aria-hidden="true"></div>
+          <div class="canvas-nodes" id="canvas-nodes"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/lifecycle/js/shared.js"></script>
+  <script src="/static/lifecycle/js/canvas-editor.js"></script>
+</body>
+</html>

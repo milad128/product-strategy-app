@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Import lifecycle data</title>
+  {% include 'includes/head-assets.html' %}
+</head>
+<body>
+  {% include 'includes/topbar.html' %}
+
+  <main class="main main--wide">
+    <div class="admin-card">
+      <h2>From old lifecycle.html (browser storage)</h2>
+      <p>
+        Positions saved in
+        <code>file:///…/bnpl-lifecycle/lifecycle.html</code>
+        live in that browser’s localStorage. The server cannot read them directly.
+      </p>
+      <ol style="margin: 1rem 0 1rem 1.25rem; font-size: 0.9rem; color: var(--muted);">
+        <li>Ensure this app is running on <code>http://127.0.0.1:8000</code></li>
+        <li>Open
+          <code>Desktop/vibe coding/bnpl-lifecycle/import-to-database.html</code>
+          in the <strong>same browser</strong> you used for lifecycle.html</li>
+        <li>Click <strong>Import to database</strong></li>
+      </ol>
+      <button type="button" class="btn btn-secondary" id="import-local-btn">
+        Import from this browser (localhost storage)
+      </button>
+      <p class="hint" style="margin-top: 0.75rem;">
+        Only works if you previously saved lifecycle data while using this app on localhost.
+      </p>
+    </div>
+
+    <div class="admin-card admin-card--wide">
+      <h2>Paste JSON manually</h2>
+      <p>Paste the contents of <code>bnpl-lifecycle-layout</code> from browser DevTools → Application → Local Storage.</p>
+      <form class="admin-form" id="paste-form">
+        <div class="field" style="grid-template-columns: 1fr;">
+          <label for="layout-json">Layout JSON</label>
+          <textarea id="layout-json" rows="8" style="font-family: monospace; font-size: 0.8rem; width: 100%; padding: 0.5rem;" placeholder='{"positions": {...}, "connections": [...]}'></textarea>
+        </div>
+        <div class="field" style="grid-template-columns: 1fr;">
+          <label for="counts-json">Counts JSON (optional)</label>
+          <textarea id="counts-json" rows="4" style="font-family: monospace; font-size: 0.8rem; width: 100%; padding: 0.5rem;" placeholder='{"applicant": 8712776, ...}'></textarea>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary">Import to database</button>
+        </div>
+      </form>
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+  </main>
+
+  <script src="/static/lifecycle/js/shared.js"></script>
+  <script>
+    const toast = document.getElementById("toast");
+
+    function showToast(message, type) {
+      toast.textContent = message;
+      toast.className = "toast show " + type;
+      setTimeout(() => toast.classList.remove("show"), 5000);
+    }
+
+    document.getElementById("import-local-btn").addEventListener("click", async () => {
+      const layoutRaw = localStorage.getItem(LAYOUT_STORAGE_KEY);
+      if (!layoutRaw) {
+        showToast("No layout in this browser. Use import-to-database.html from the old project folder.", "info");
+        return;
+      }
+      try {
+        const layout = JSON.parse(layoutRaw);
+        const countsRaw = localStorage.getItem(STORAGE_KEY);
+        const counts = countsRaw ? JSON.parse(countsRaw) : null;
+        const res = await fetch("/api/lifecycle/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ layout, counts }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.detail || "Import failed");
+        showToast("Imported: " + body.imported, "success");
+      } catch (e) {
+        showToast(String(e.message), "info");
+      }
+    });
+
+    document.getElementById("paste-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const layoutText = document.getElementById("layout-json").value.trim();
+      const countsText = document.getElementById("counts-json").value.trim();
+      if (!layoutText) {
+        showToast("Layout JSON is required.", "info");
+        return;
+      }
+      try {
+        const layout = JSON.parse(layoutText);
+        const counts = countsText ? JSON.parse(countsText) : null;
+        const res = await fetch("/api/lifecycle/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ layout, counts }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.detail || "Import failed");
+        showToast("Imported: " + body.imported + ". Open Lifecycle to verify.", "success");
+      } catch (err) {
+        showToast("Error: " + err.message, "info");
+      }
+    });
+  </script>
+</body>
+</html>

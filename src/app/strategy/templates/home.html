@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product Strategy App</title>
+  {% include 'includes/head-assets.html' %}
+</head>
+<body>
+  {% include 'includes/topbar.html' %}
+
+  <main class="main">
+    <div class="home-hero">
+      <p class="home-hero__eyebrow">Credit product strategy · v1</p>
+      <h2>Product Strategy App</h2>
+      <p class="home-hero__subtitle">
+        Manage and monitor product strategy for <strong>{{ active_product }}</strong>.
+        Growth equation, metric definitions, and BNPL user lifecycle in one place.
+      </p>
+    </div>
+
+    {% for group in groups %}
+    <section>
+      <h2 class="section-title">{{ group }}</h2>
+      <div class="home-grid">
+        {% for page in pages if page.group == group %}
+        <a href="{{ page.url }}" class="home-card">
+          <span class="home-card__icon" aria-hidden="true">{{ page.icon }}</span>
+          <h3>{{ page.title }}</h3>
+          <p>{{ page.description }}</p>
+          <span class="home-card__link">Open →</span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endfor %}
+
+    <footer class="page-footer">
+      Active product: {{ active_product }} · BNPL (Secured) and C-Credit planned for future versions.
+    </footer>
+  </main>
+</body>
+</html>

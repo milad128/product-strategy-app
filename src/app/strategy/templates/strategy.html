@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strategy — BNPL (Unsecured)</title>
+  {% include 'includes/head-assets.html' %}
+</head>
+<body>
+  {% include 'includes/topbar.html' %}
+
+  <main class="main">
+    <div class="page-header">
+      <h2>
+        Product Strategy
+        <span class="badge badge-active">v1</span>
+      </h2>
+      <p class="subtitle">Growth equation and input drivers for credit products</p>
+    </div>
+
+    <section>
+      <h2 class="section-title">Product lines</h2>
+      <div class="product-grid">
+        {% for product in products %}
+        <div class="product-card{% if product.active %} active{% endif %}">
+          <h3>
+            {{ product.name }}
+            {% if product.active %}
+            <span class="badge badge-active">Active</span>
+            {% else %}
+            <span class="badge badge-planned">Planned</span>
+            {% endif %}
+          </h3>
+          <p>{{ product.status }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">North star</h2>
+      <div class="card north-star">
+        <div class="metric">{{ north_star.metric }}</div>
+        <div class="full-name">{{ north_star.full_name }}</div>
+        <p class="description">{{ north_star.description }}</p>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Growth equations</h2>
+      {% for eq in equations %}
+      <div class="card">
+        <div class="equation-label">{{ eq.label }}</div>
+        <div class="equation-formula">{{ eq.formula }}</div>
+        {% if eq.description %}
+        <p class="equation-desc">{{ eq.description }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </section>
+
+    <section>
+      <h2 class="section-title">Input drivers</h2>
+      <div class="card">
+        <div class="tree">
+          {% macro render_node(node, is_root=false) %}
+          <li>
+            <span class="{% if is_root %}node-root{% else %}node-name{% endif %}">{{ node.name }}</span>
+            {% if node.children %}
+            <ul>
+              {% for child in node.children %}
+              {{ render_node(child) }}
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </li>
+          {% endmacro %}
+          <ul>
+            {{ render_node(driver_tree, true) }}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Decomposition formulas</h2>
+      {% for eq in buyer_formulas %}
+      <div class="card">
+        <div class="equation-label">{{ eq.label }}</div>
+        <div class="equation-formula">{{ eq.formula }}</div>
+      </div>
+      {% endfor %}
+    </section>
+
+    <footer class="page-footer">
+      Definitions are documented in <code>docs/</code>.
+      Product: BNPL (Unsecured) · Version 1
+    </footer>
+  </main>
+</body>
+</html>
