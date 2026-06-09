@@ -38,6 +38,7 @@ function buildForm(counts) {
     section.innerHTML = "<h3>" + (GROUP_LABELS[groupKey] || groupKey) + "</h3>";
 
     for (const s of stagesInGroup) {
+      if (isChannelShape(s.shape)) continue;
       const wrap = document.createElement("div");
       wrap.className = "field";
       const pct =
@@ -51,13 +52,16 @@ function buildForm(counts) {
         '<span class="hint">Share of applicants: ' + pct + "</span>";
       section.appendChild(wrap);
     }
-    formFields.appendChild(section);
+    if (section.children.length > 1) {
+      formFields.appendChild(section);
+    }
   }
 }
 
 function readForm() {
-  const counts = {};
+  const counts = { ...getCounts(layout) };
   for (const s of getAllStages(layout)) {
+    if (isChannelShape(s.shape)) continue;
     const input = document.getElementById("f-" + s.id);
     const v = parseInt(input?.value, 10);
     counts[s.id] = Number.isFinite(v) && v >= 0 ? v : 0;

@@ -9,6 +9,21 @@ const DEFAULT_BOARD_WIDTH = 1280;
 const DEFAULT_BOARD_HEIGHT = 620;
 const EP_STAGE = "stage";
 const EP_GROUP = "group";
+const SHAPE_STAGE = "stage";
+const SHAPE_CHANNEL = "channel";
+
+function isChannelShape(shape) {
+  return shape === SHAPE_CHANNEL || shape === "circle";
+}
+
+function normalizeShapeType(shape) {
+  return isChannelShape(shape) ? SHAPE_CHANNEL : SHAPE_STAGE;
+}
+
+function getStageShapeType(layout, stageId) {
+  const stage = getAllStages(layout).find((s) => s.id === stageId);
+  return stage ? normalizeShapeType(stage.shape) : SHAPE_STAGE;
+}
 
 /** Built-in stage definitions */
 const STAGES = [
@@ -196,18 +211,20 @@ function getAllStages(layout) {
     result.push({
       ...s,
       label: labels[s.id] || s.label,
+      shape: SHAPE_STAGE,
       isCustom: false,
     });
   }
 
   for (const s of lay.customStages || []) {
     if (hidden.has(s.id)) continue;
+    const shape = normalizeShapeType(s.shape);
     result.push({
       id: s.id,
-      label: s.label || "New Stage",
+      label: s.label || (shape === SHAPE_CHANNEL ? "New Channel" : "New Stage"),
       defaultCount: s.count ?? 0,
       group: "custom",
-      shape: s.shape === "circle" ? "circle" : "rectangle",
+      shape,
       isCustom: true,
     });
   }
@@ -359,12 +376,15 @@ function mergeLayout(parsed) {
     base.hiddenStages = parsed.hiddenStages.filter((id) => typeof id === "string");
   }
   if (Array.isArray(parsed.customStages)) {
-    base.customStages = parsed.customStages.map((s) => ({
-      id: s.id,
-      label: s.label || "New Stage",
-      shape: s.shape === "circle" ? "circle" : "rectangle",
-      count: typeof s.count === "number" ? s.count : 0,
-    }));
+    base.customStages = parsed.customStages.map((s) => {
+      const shape = normalizeShapeType(s.shape);
+      return {
+        id: s.id,
+        label: s.label || (shape === SHAPE_CHANNEL ? "New Channel" : "New Stage"),
+        shape,
+        count: typeof s.count === "number" ? s.count : 0,
+      };
+    });
   }
     if (Array.isArray(parsed.connections) && parsed.connections.length > 0) {
     base.connections = parsed.connections

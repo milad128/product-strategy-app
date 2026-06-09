@@ -34,7 +34,7 @@
   let layout = getLayout();
   let mode = "select";
   let arrowType = ARROW_BENT;
-  let stageShape = "rectangle";
+  let stageShape = SHAPE_STAGE;
   let selectedNodeId = null;
   let selectedGroupId = null;
   let selectedConnId = null;
@@ -188,6 +188,11 @@
   }
 
   function renderNodeContent(el, stat) {
+    if (isChannelShape(stat.shape)) {
+      el.innerHTML =
+        '<div class="stage__name">' + escapeHtml(stat.label) + "</div>";
+      return;
+    }
     const isBaseline = stat.id === "applicant";
     el.innerHTML =
       '<div class="stage__name">' + escapeHtml(stat.label) + "</div>" +
@@ -220,8 +225,7 @@
       const pos = layout.positions[stage.id] || { x: 0, y: 0 };
       const div = document.createElement("div");
       div.className =
-        "canvas-node stage stage--" +
-        (stage.shape === "circle" ? "circle" : "rectangle");
+        "canvas-node stage stage--" + normalizeShapeType(stage.shape);
       div.setAttribute("data-stage", stage.id);
       if (!IS_PRESENT) {
         div.setAttribute("role", "button");
@@ -402,7 +406,10 @@
   }
 
   function setStageName(stageId, name) {
-    const label = (name || "").trim() || "New Stage";
+    const shape = getStageShapeType(layout, stageId);
+    const label =
+      (name || "").trim() ||
+      (shape === SHAPE_CHANNEL ? "New Channel" : "New Stage");
     if (isCustomStage(layout, stageId)) {
       const s = layout.customStages.find((x) => x.id === stageId);
       if (s) s.label = label;
@@ -463,6 +470,14 @@
       propertiesBar.classList.add("is-active");
       propsStage.hidden = false;
       if (propsArrow) propsArrow.hidden = true;
+      const shape = getStageShapeType(layout, selectedNodeId);
+      const nameLabel = document.getElementById("object-name-label");
+      if (nameLabel) {
+        nameLabel.textContent =
+          shape === SHAPE_CHANNEL ? "Channel name" : "Stage name";
+      }
+      stageNameInput.placeholder =
+        shape === SHAPE_CHANNEL ? "Channel name" : "Stage name";
       stageNameInput.value = getStageLabel(layout, selectedNodeId);
     } else if (selectedConnId && propsArrow && connLabelInput) {
       propertiesBar.classList.add("is-active");
@@ -920,14 +935,18 @@
 
   function addCustomStage(x, y) {
     const id = "custom-" + ++customStageCounter;
+    const isChannel = stageShape === SHAPE_CHANNEL;
     if (!layout.customStages) layout.customStages = [];
     layout.customStages.push({
       id,
-      label: "New Stage",
+      label: isChannel ? "New Channel" : "New Stage",
       shape: stageShape,
       count: 0,
     });
-    layout.positions[id] = { x: Math.max(0, x - 80), y: Math.max(0, y - 40) };
+    layout.positions[id] = {
+      x: Math.max(0, x - (isChannel ? 70 : 80)),
+      y: Math.max(0, y - (isChannel ? 22 : 40)),
+    };
     markDirty();
     buildNodes();
     bindNodes();
@@ -1516,7 +1535,7 @@
   }
 
   function setStageShape(shape) {
-    stageShape = shape === "circle" ? "circle" : "rectangle";
+    stageShape = normalizeShapeType(shape);
     updateStageShapeUI();
     updateModeHint();
   }
@@ -1547,9 +1566,11 @@
         ? "Click target stage or group box to complete the " + typeLabel + " arrow."
         : "Choose Straight/Bent, then click source and target (stage or group).";
     } else if (mode === "add-stage") {
-      const shapeLabel = stageShape === "circle" ? "circle" : "rectangle";
+      const shapeLabel = stageShape === SHAPE_CHANNEL ? "channel" : "stage";
       modeHint.textContent =
-        "Choose Rectangle or Circle, then click on the canvas to place a new " + shapeLabel + " stage.";
+        "Choose Stage or Channel under Shape type, then click on the canvas to place a new " +
+        shapeLabel +
+        ".";
     } else if (selectedBoard) {
       modeHint.textContent =
         "Canvas selected — drag edge handles to resize. Click empty space elsewhere to deselect.";

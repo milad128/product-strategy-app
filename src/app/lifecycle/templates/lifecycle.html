@@ -31,10 +31,16 @@
         <button type="button" class="tool-btn tool-btn--compact" data-arrow-type="straight">Straight</button>
         <button type="button" class="tool-btn tool-btn--compact is-active" data-arrow-type="bent">Bent</button>
       </div>
-      <div class="canvas-toolbar__shapes" id="stage-shape-picker" aria-label="Stage shape">
-        <span class="toolbar-label">Shape</span>
-        <button type="button" class="tool-btn tool-btn--compact is-active" data-stage-shape="rectangle" title="Rectangle stage">▭</button>
-        <button type="button" class="tool-btn tool-btn--compact" data-stage-shape="circle" title="Circle stage">○</button>
+      <div class="canvas-toolbar__shapes" id="stage-shape-picker" aria-label="Shape type">
+        <span class="toolbar-label">Shape type</span>
+        <button type="button" class="tool-btn tool-btn--compact is-active" data-stage-shape="stage" title="Stage (rectangle)">
+          <span class="shape-icon shape-icon--stage" aria-hidden="true"></span>
+          Stage
+        </button>
+        <button type="button" class="tool-btn tool-btn--compact" data-stage-shape="channel" title="Channel (pill)">
+          <span class="shape-icon shape-icon--channel" aria-hidden="true"></span>
+          Channel
+        </button>
       </div>
       <div class="canvas-toolbar__actions">
         <button type="button" class="tool-btn tool-btn--secondary" id="btn-present" title="Open read-only presentation in a new tab">Present</button>
@@ -46,7 +52,7 @@
 
     <div class="canvas-properties" id="canvas-properties">
       <div class="properties-row" id="props-stage" hidden>
-        <label class="properties-label" for="stage-name-input">Stage name</label>
+        <label class="properties-label" for="stage-name-input" id="object-name-label">Stage name</label>
         <input
           type="text"
           id="stage-name-input"

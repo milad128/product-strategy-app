@@ -957,21 +957,57 @@
   z-index: 5;
 }
 
-.stage--circle {
-  border-radius: 50%;
-  min-width: 140px;
-  min-height: 140px;
-  max-width: 180px;
-  width: 160px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-
+.stage--stage,
 .stage--rectangle {
   border-radius: 10px;
+}
+
+.stage--channel,
+.stage--circle {
+  border-radius: 999px;
+  min-width: 100px;
+  max-width: 260px;
+  width: max-content;
+  min-height: 44px;
+  padding: 0.6rem 1.35rem;
+  background: linear-gradient(145deg, #5b8def, #3d6fd9);
+  box-shadow: 0 4px 14px rgba(61, 111, 217, 0.35);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.stage--channel .stage__name,
+.stage--circle .stage__name {
+  margin-bottom: 0;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.stage--channel:hover,
+.stage--circle:hover {
+  box-shadow: 0 6px 18px rgba(61, 111, 217, 0.45);
+}
+
+.shape-icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+
+.shape-icon--stage {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--purple);
+}
+
+.shape-icon--channel {
+  width: 16px;
+  height: 8px;
+  border-radius: 999px;
+  background: #3d6fd9;
 }
 
 .canvas-board.mode-add-stage {

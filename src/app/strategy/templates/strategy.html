@@ -59,6 +59,18 @@
       {% endfor %}
     </section>
 
+
+    <section>
+      <h2 class="section-title">Decomposition formulas</h2>
+      {% for eq in buyer_formulas %}
+      <div class="card">
+        <div class="equation-label">{{ eq.label }}</div>
+        <div class="equation-formula">{{ eq.formula }}</div>
+      </div>
+      {% endfor %}
+    </section>
+
+    
     <section>
       <h2 class="section-title">Input drivers</h2>
       <div class="card">
@@ -82,15 +94,6 @@
       </div>
     </section>
 
-    <section>
-      <h2 class="section-title">Decomposition formulas</h2>
-      {% for eq in buyer_formulas %}
-      <div class="card">
-        <div class="equation-label">{{ eq.label }}</div>
-        <div class="equation-formula">{{ eq.formula }}</div>
-      </div>
-      {% endfor %}
-    </section>
 
     <footer class="page-footer">
       Definitions are documented in <code>docs/</code>.

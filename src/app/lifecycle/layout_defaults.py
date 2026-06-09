@@ -149,7 +149,11 @@ def merge_layout(parsed: dict[str, Any] | None) -> dict[str, Any]:
             {
                 "id": s.get("id"),
                 "label": s.get("label") or "New Stage",
-                "shape": "circle" if s.get("shape") == "circle" else "rectangle",
+                "shape": (
+                    "channel"
+                    if s.get("shape") in ("channel", "circle")
+                    else "stage"
+                ),
                 "count": s.get("count") if isinstance(s.get("count"), (int, float)) else 0,
             }
             for s in custom
