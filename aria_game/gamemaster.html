@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Game Master — PROTOCOL: OVERRIDE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/theme.css" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--mono);
+    background: var(--bg-deep);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 28px 48px;
+  }
+  body.ai-theme::before,
+  body.ai-theme::after { z-index: 0; }
+  h1 {
+    position: relative;
+    z-index: 1;
+    font-family: var(--sans);
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    background: linear-gradient(135deg, var(--cyan), var(--violet));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    position: relative;
+    z-index: 1;
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .status-bar {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel);
+    backdrop-filter: blur(var(--glass-blur));
+    box-shadow: var(--shadow-panel);
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+  .status-bar .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 12px var(--cyan-glow);
+  }
+  .status-bar .step { color: var(--amber); font-weight: 600; font-family: var(--sans); }
+  .grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel);
+    backdrop-filter: blur(var(--glass-blur));
+    box-shadow: var(--shadow-panel);
+    padding: 18px;
+  }
+  .panel h2 {
+    font-family: var(--sans);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+  .btn {
+    display: block;
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    border: 1px solid;
+    margin-bottom: 10px;
+    transition: all 0.25s;
+  }
+  .btn:last-child { margin-bottom: 0; }
+  .btn-start {
+    color: var(--bg-deep);
+    background: linear-gradient(135deg, var(--cyan), #38bdf8);
+    border-color: transparent;
+    box-shadow: var(--glow-cyan);
+  }
+  .btn-start:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 0 40px var(--cyan-glow); }
+  .btn-reset {
+    color: var(--amber);
+    background: var(--amber-soft);
+    border-color: rgba(251, 191, 36, 0.35);
+  }
+  .btn-reset:hover:not(:disabled) { background: rgba(251, 191, 36, 0.2); }
+  .btn-reboot {
+    color: var(--red);
+    background: var(--red-soft);
+    border-color: rgba(251, 113, 133, 0.35);
+  }
+  .btn-reboot:hover:not(:disabled) { background: rgba(251, 113, 133, 0.25); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin: -4px 0 12px;
+  }
+  .msg { font-size: 11px; min-height: 18px; margin-top: 10px; letter-spacing: 0.05em; }
+  .msg.ok { color: #10b981; }
+  .msg.err { color: var(--red); }
+
+  .announcement {
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+    font-size: 15px;
+    line-height: 1.85;
+    direction: rtl;
+    text-align: right;
+    color: var(--text);
+    border-right: 3px solid var(--cyan);
+    padding: 12px 16px 12px 0;
+    background: rgba(0, 229, 255, 0.04);
+    border-radius: var(--radius-xs);
+  }
+  .announcement-sub {
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.75;
+    direction: rtl;
+    text-align: right;
+    border-top: 1px dashed var(--border);
+    padding-top: 12px;
+    border-right: 3px solid var(--amber);
+    padding-right: 12px;
+  }
+
+  .teams { display: flex; flex-direction: column; gap: 14px; }
+  .team-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    background: rgba(3, 7, 18, 0.45);
+  }
+  .team-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .team-name {
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--cyan);
+    letter-spacing: 0.08em;
+  }
+  .team-score {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--cyan);
+  }
+  .team-members { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5; }
+  .score-log { font-size: 11px; }
+  .score-log table { width: 100%; border-collapse: collapse; }
+  .score-log th {
+    text-align: left;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 4px 8px 4px 0;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .score-log td {
+    padding: 5px 8px 5px 0;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.08);
+  }
+  .score-log .pts { color: var(--amber); font-weight: 700; }
+  .score-log .empty { color: var(--text-muted); font-style: italic; padding: 8px 0; }
+  .link-game {
+    display: inline-block;
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    transition: color 0.2s;
+  }
+  .link-game:hover { color: var(--cyan); }
+  .link-stack { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+
+  .config-block {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .config-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .config-block h3 {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--violet);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .config-field { margin-bottom: 10px; }
+  .config-field label {
+    display: block;
+    font-family: var(--sans);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .config-field textarea,
+  .config-field input[type="number"],
+  .config-field input[type="text"] {
+    width: 100%;
+    background: rgba(3, 7, 18, 0.6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--text);
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .config-field textarea {
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    direction: rtl;
+    text-align: right;
+    resize: vertical;
+  }
+  .config-field input[type="number"] {
+    font-family: var(--mono);
+    direction: ltr;
+    text-align: left;
+    max-width: 120px;
+  }
+  .config-field input[type="text"] {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    direction: ltr;
+    text-align: left;
+  }
+  .config-field textarea:focus,
+  .config-field input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px var(--cyan-soft);
+  }
+  .btn-save {
+    color: var(--cyan);
+    background: var(--cyan-soft);
+    border-color: var(--cyan);
+    margin-top: 4px;
+    margin-bottom: 0;
+  }
+  .btn-save:hover:not(:disabled) { background: rgba(0, 229, 255, 0.2); }
+  .config-msg { font-size: 10px; min-height: 16px; margin-top: 6px; letter-spacing: 0.05em; }
+  .passphrase-grid { display: flex; flex-direction: column; gap: 12px; }
+  .mission-config-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: rgba(3, 7, 18, 0.35);
+  }
+  .mission-config-row .mission-id {
+    grid-column: 1 / -1;
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--violet);
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .mission-encoding {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+    font-size: 11px;
+  }
+  @media (max-width: 700px) { .mission-encoding { grid-template-columns: 1fr; } }
+  .encoding-block label {
+    display: block;
+    font-family: var(--sans);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .encoding-block .value { color: var(--cyan); letter-spacing: 0.05em; line-height: 1.5; word-break: break-word; }
+  .encoding-block .value.mapping-type { color: var(--violet); font-weight: 600; }
+  .encoding-block .value.digits { font-weight: 700; font-size: 12px; }
+  .mapping-legend {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-xs);
+    background: rgba(167, 139, 250, 0.04);
+  }
+  .mapping-legend strong { color: var(--violet); }
+  .digit-scores-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 12px 0;
+  }
+  @media (max-width: 700px) {
+    .digit-scores-grid { grid-template-columns: repeat(2, 1fr); }
+    .mission-config-row { grid-template-columns: 1fr; }
+  }
+  .config-msg.ok { color: #10b981; }
+  .config-msg.err { color: var(--red); }
+</style>
+</head>
+<body class="ai-theme">
+
+<h1>GAME MASTER</h1>
+<div class="subtitle">PROTOCOL: OVERRIDE · Control Panel</div>
+
+<div class="status-bar">
+  <span class="dot" id="connDot"></span>
+  <span id="connText">Connecting…</span>
+  <span>·</span>
+  <span class="step" id="stepLabel">—</span>
+</div>
+
+<div class="grid">
+  <aside>
+    <div class="panel">
+      <h2>Controls</h2>
+
+      <button type="button" class="btn btn-start" id="btnStart">Start</button>
+      <p class="btn-hint">Begins Step 1 on the game screen (projector).</p>
+
+      <button type="button" class="btn btn-reset" id="btnResetAct">Reset act</button>
+      <p class="btn-hint">Clear scores &amp; act progress. Stay on current step. Teams kept.</p>
+
+      <button type="button" class="btn btn-reboot" id="btnReboot">Reboot</button>
+      <p class="btn-hint">Clear teams, scores &amp; leaderboard. GM settings are kept.</p>
+
+      <div class="msg" id="actionMsg"></div>
+    </div>
+
+    <div class="link-stack">
+      <a class="link-game" href="/" target="_blank">Open game screen ↗</a>
+      <a class="link-game" href="/gamemaster/guide">GM guide — how to run the game ↗</a>
+      <a class="link-game" href="/gamemaster/routes" target="_blank">Routes cheat sheet ↗</a>
+    </div>
+  </aside>
+
+  <main>
+    <div class="panel" style="margin-bottom:20px">
+      <h2>General configuration</h2>
+
+      <div class="config-block">
+        <h3>Missions — timer, names &amp; passphrases</h3>
+        <div class="config-field">
+          <label for="cfgMissionTimer">Mission timer (minutes)</label>
+          <input type="number" id="cfgMissionTimer" min="1" max="600" value="180" />
+        </div>
+        <div class="mapping-legend">
+          <strong>Digit mapping per mission:</strong>
+          M1 &amp; M4 → A1Z26 · M2 &amp; M5 → ASCII · M3 → Phone keypad (multi-tap).
+          Digits update when you save. Use them in room puzzles — teams decode to the passphrase.
+        </div>
+        <div class="config-block" style="margin-bottom:12px">
+          <h3 style="font-size:11px;letter-spacing:2px;color:var(--amber);margin-bottom:8px">Digit entry scores (by order)</h3>
+          <p class="mapping-legend" style="margin-bottom:8px">
+            Points awarded when a team submits a correct digit. 1st team gets rank #1 score, etc.
+          </p>
+          <div class="digit-scores-grid">
+            <div class="config-field">
+              <label for="cfgDigitScore1">1st team</label>
+              <input type="number" id="cfgDigitScore1" min="0" max="9999" value="100" />
+            </div>
+            <div class="config-field">
+              <label for="cfgDigitScore2">2nd team</label>
+              <input type="number" id="cfgDigitScore2" min="0" max="9999" value="80" />
+            </div>
+            <div class="config-field">
+              <label for="cfgDigitScore3">3rd team</label>
+              <input type="number" id="cfgDigitScore3" min="0" max="9999" value="50" />
+            </div>
+            <div class="config-field">
+              <label for="cfgDigitScore4">4th team</label>
+              <input type="number" id="cfgDigitScore4" min="0" max="9999" value="20" />
+            </div>
+          </div>
+          <div class="config-field" style="margin-top:10px">
+            <label for="cfgDigitWrongPenalty">Wrong digit penalty</label>
+            <input type="number" id="cfgDigitWrongPenalty" min="0" max="9999" value="1" />
+          </div>
+        </div>
+        <div class="passphrase-grid" id="passphraseFields"></div>
+        <button type="button" class="btn btn-save" id="btnSaveMission" style="margin-top:12px">Save general config</button>
+        <div class="config-msg" id="cfgMissionMsg"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:20px">
+      <h2>Step configuration</h2>
+
+      <div class="config-block">
+        <h3>Step 1 — ARIA announcement</h3>
+        <div class="config-field">
+          <label for="cfgStep1Text">Persian narration text</label>
+          <textarea id="cfgStep1Text" rows="6" placeholder="ARIA Step 1 announcement…"></textarea>
+        </div>
+        <button type="button" class="btn btn-save" id="btnSaveStep1">Save step 1</button>
+        <div class="config-msg" id="cfgStep1Msg"></div>
+      </div>
+
+      <div class="config-block">
+        <h3>Step 2 — Team building</h3>
+        <div class="config-field">
+          <label for="cfgStep2Text">Persian narration text</label>
+          <textarea id="cfgStep2Text" rows="5" placeholder="ARIA Step 2 announcement…"></textarea>
+        </div>
+        <div class="config-field">
+          <label for="cfgStep2Timer">Registration timer (seconds)</label>
+          <input type="number" id="cfgStep2Timer" min="5" max="600" value="60" />
+        </div>
+        <button type="button" class="btn btn-save" id="btnSaveStep2">Save step 2</button>
+        <div class="config-msg" id="cfgStep2Msg"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Teams &amp; scores</h2>
+      <div class="teams" id="teamsGrid">
+        <p class="score-log empty">No teams registered yet.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const API = '';
+const POLL_MS = 2000;
+const msgEl = document.getElementById('actionMsg');
+
+const cfgStep1Text = document.getElementById('cfgStep1Text');
+const cfgStep2Text = document.getElementById('cfgStep2Text');
+const cfgStep2Timer = document.getElementById('cfgStep2Timer');
+const cfgMissionTimer = document.getElementById('cfgMissionTimer');
+const cfgDigitScore1 = document.getElementById('cfgDigitScore1');
+const cfgDigitScore2 = document.getElementById('cfgDigitScore2');
+const cfgDigitScore3 = document.getElementById('cfgDigitScore3');
+const cfgDigitScore4 = document.getElementById('cfgDigitScore4');
+const cfgDigitWrongPenalty = document.getElementById('cfgDigitWrongPenalty');
+const passphraseFields = document.getElementById('passphraseFields');
+let editingConfig = false;
+let missionLayers = [];
+
+function buildPassphraseFields(layers) {
+  missionLayers = layers || [];
+  passphraseFields.innerHTML = missionLayers.map(layer => `
+    <div class="mission-config-row" data-mission-id="${layer.id}">
+      <div class="mission-id">Mission ${layer.id}</div>
+      <div class="config-field">
+        <label for="cfgName${layer.id}">Mission name</label>
+        <input type="text" id="cfgName${layer.id}" maxlength="32" autocomplete="off" />
+      </div>
+      <div class="config-field">
+        <label for="cfgPass${layer.id}">Passphrase</label>
+        <input type="text" id="cfgPass${layer.id}" maxlength="32" autocomplete="off" />
+      </div>
+      <div class="mission-encoding">
+        <div class="encoding-block">
+          <label>Mapping used</label>
+          <div class="value mapping-type" id="cfgMapping${layer.id}">—</div>
+        </div>
+        <div class="encoding-block">
+          <label>Digit encoding</label>
+          <div class="value digits" id="cfgDigits${layer.id}">—</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  missionLayers.forEach(layer => {
+    [`cfgName${layer.id}`, `cfgPass${layer.id}`].forEach(id => {
+      const input = document.getElementById(id);
+      input.addEventListener('focus', () => { editingConfig = true; });
+      input.addEventListener('blur', () => {
+        setTimeout(() => {
+          const active = document.activeElement;
+          const editingMission = active?.id?.startsWith('cfgName')
+            || active?.id?.startsWith('cfgPass');
+          if (![cfgStep1Text, cfgStep2Text, cfgStep2Timer, cfgMissionTimer].includes(active)
+              && !editingMission) {
+            editingConfig = false;
+          }
+        }, 100);
+      });
+    });
+    updateLayerEncodingDisplay(layer);
+  });
+}
+
+function updateLayerEncodingDisplay(layer) {
+  const mappingEl = document.getElementById(`cfgMapping${layer.id}`);
+  const digitsEl = document.getElementById(`cfgDigits${layer.id}`);
+  if (!mappingEl || !digitsEl) return;
+  mappingEl.textContent = layer.mapping_label || layer.mapping || '—';
+  digitsEl.textContent = layer.digits || '—';
+}
+
+function fillMissionConfig(mission) {
+  if (!mission) return;
+  cfgMissionTimer.value = Math.max(1, Math.round((mission.duration_seconds || 10800) / 60));
+  const scores = mission.digit_scores_by_rank || {};
+  cfgDigitScore1.value = scores['1'] ?? scores[1] ?? 100;
+  cfgDigitScore2.value = scores['2'] ?? scores[2] ?? 80;
+  cfgDigitScore3.value = scores['3'] ?? scores[3] ?? 50;
+  cfgDigitScore4.value = scores['4'] ?? scores[4] ?? 20;
+  cfgDigitWrongPenalty.value = mission.digit_wrong_penalty ?? 1;
+  const phrases = mission.passphrases || {};
+  const names = mission.names || {};
+  const layerMeta = {};
+  (mission.layers || []).forEach(l => { layerMeta[l.id] = l; });
+  missionLayers.forEach(layer => {
+    const meta = layerMeta[layer.id] || layer;
+    const passInput = document.getElementById(`cfgPass${layer.id}`);
+    const nameInput = document.getElementById(`cfgName${layer.id}`);
+    if (passInput) {
+      passInput.value = phrases[String(layer.id)] || phrases[layer.id] || meta.passphrase || '';
+    }
+    if (nameInput) {
+      nameInput.value = names[String(layer.id)] || names[layer.id] || meta.name || layer.name || '';
+    }
+    updateLayerEncodingDisplay(meta);
+  });
+}
+
+function collectMissionConfig() {
+  const passphrases = {};
+  const names = {};
+  missionLayers.forEach(layer => {
+    const passInput = document.getElementById(`cfgPass${layer.id}`);
+    const nameInput = document.getElementById(`cfgName${layer.id}`);
+    passphrases[String(layer.id)] = (passInput?.value || '').trim().toUpperCase();
+    names[String(layer.id)] = (nameInput?.value || '').trim().toUpperCase();
+  });
+  return {
+    duration_seconds: Math.max(60, (parseInt(cfgMissionTimer.value, 10) || 180) * 60),
+    passphrases,
+    names,
+    digit_scores_by_rank: {
+      '1': parseInt(cfgDigitScore1.value, 10) || 0,
+      '2': parseInt(cfgDigitScore2.value, 10) || 0,
+      '3': parseInt(cfgDigitScore3.value, 10) || 0,
+      '4': parseInt(cfgDigitScore4.value, 10) || 0,
+    },
+    digit_wrong_penalty: parseInt(cfgDigitWrongPenalty.value, 10) || 0,
+  };
+}
+
+function setConfigMsg(el, text, ok) {
+  el.textContent = text;
+  el.className = 'config-msg ' + (ok ? 'ok' : 'err');
+}
+
+function setMsg(text, ok) {
+  msgEl.textContent = text;
+  msgEl.className = 'msg ' + (ok ? 'ok' : 'err');
+}
+
+async function post(path) {
+  const res = await fetch(`${API}${path}`, { method: 'POST' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(typeof data.detail === 'string' ? data.detail : 'Request failed');
+  }
+  return data;
+}
+
+async function postJson(path, body) {
+  const res = await fetch(`${API}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(typeof data.detail === 'string' ? data.detail : 'Request failed');
+  }
+  return data;
+}
+
+[cfgStep1Text, cfgStep2Text, cfgStep2Timer, cfgMissionTimer,
+ cfgDigitScore1, cfgDigitScore2, cfgDigitScore3, cfgDigitScore4,
+ cfgDigitWrongPenalty].forEach(el => {
+  el.addEventListener('focus', () => { editingConfig = true; });
+  el.addEventListener('blur', () => {
+    setTimeout(() => {
+      const active = document.activeElement;
+      const editingMission = active?.id?.startsWith('cfgName')
+        || active?.id?.startsWith('cfgPass');
+      if (![cfgStep1Text, cfgStep2Text, cfgStep2Timer, cfgMissionTimer].includes(active)
+          && !editingMission) {
+        editingConfig = false;
+      }
+    }, 100);
+  });
+});
+
+document.getElementById('btnSaveMission').addEventListener('click', async () => {
+  const btn = document.getElementById('btnSaveMission');
+  const msg = document.getElementById('cfgMissionMsg');
+  btn.disabled = true;
+  try {
+    await postJson('/gm/config/mission', collectMissionConfig());
+    setConfigMsg(msg, 'General config saved.', true);
+    editingConfig = false;
+    refresh();
+  } catch (e) {
+    setConfigMsg(msg, e.message, false);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('btnSaveStep1').addEventListener('click', async () => {
+  const btn = document.getElementById('btnSaveStep1');
+  const msg = document.getElementById('cfgStep1Msg');
+  btn.disabled = true;
+  try {
+    await postJson('/gm/config/step1', { narration: cfgStep1Text.value });
+    setConfigMsg(msg, 'Step 1 saved.', true);
+    editingConfig = false;
+  } catch (e) {
+    setConfigMsg(msg, e.message, false);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('btnSaveStep2').addEventListener('click', async () => {
+  const btn = document.getElementById('btnSaveStep2');
+  const msg = document.getElementById('cfgStep2Msg');
+  btn.disabled = true;
+  try {
+    await postJson('/gm/config/step2', {
+      narration: cfgStep2Text.value,
+      duration_seconds: parseInt(cfgStep2Timer.value, 10) || 60,
+    });
+    setConfigMsg(msg, 'Step 2 saved.', true);
+    editingConfig = false;
+  } catch (e) {
+    setConfigMsg(msg, e.message, false);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('btnStart').addEventListener('click', async () => {
+  const btn = document.getElementById('btnStart');
+  btn.disabled = true;
+  try {
+    await post('/gm/step/start');
+    setMsg('Game started — Step 1 on projector.', true);
+  } catch (e) {
+    setMsg(e.message, false);
+  } finally {
+    btn.disabled = false;
+    refresh();
+  }
+});
+
+document.getElementById('btnResetAct').addEventListener('click', async () => {
+  if (!confirm('Reset act progress? Scores cleared. Current step restarts. Teams are kept.')) return;
+  try {
+    const data = await post('/gm/reset-act');
+    setMsg(`Act reset — ${data.step !== undefined ? 'step ' + data.step : 'done'}.`, true);
+  } catch (e) {
+    setMsg(e.message, false);
+  }
+  refresh();
+});
+
+document.getElementById('btnReboot').addEventListener('click', async () => {
+  if (!confirm('Reboot the game? Teams, scores, and leaderboard will be cleared. Step 1/2 settings are kept.')) return;
+  try {
+    await post('/gm/reset');
+    setMsg('Game rebooted. Teams & scores cleared. Step config kept.', true);
+  } catch (e) {
+    setMsg(e.message, false);
+  }
+  refresh();
+});
+
+function renderTeams(teams) {
+  const grid = document.getElementById('teamsGrid');
+  if (!teams.length) {
+    grid.innerHTML = '<p class="score-log empty">No teams registered yet.</p>';
+    return;
+  }
+  grid.innerHTML = teams.map(t => {
+    const logRows = t.score_log.length
+      ? t.score_log.map(e => `
+          <tr>
+            <td>Act ${e.act} · ${e.act_name}</td>
+            <td>#${e.rank}</td>
+            <td class="pts">+${e.points}</td>
+          </tr>`).join('')
+      : '<tr><td colspan="3" class="empty">No act scores yet</td></tr>';
+    return `
+      <div class="team-card">
+        <div class="team-head">
+          <div class="team-name">${esc(t.name)}</div>
+          <div class="team-score">${t.total_score}</div>
+        </div>
+        <div class="team-members">${t.members ? esc(t.members) : '<em>No members listed</em>'}</div>
+        <div class="score-log">
+          <table>
+            <thead><tr><th>Act</th><th>Rank</th><th>Points</th></tr></thead>
+            <tbody>${logRows}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function esc(s) {
+  return String(s)
+    .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+}
+
+async function refresh() {
+  try {
+    const res = await fetch(`${API}/gm/state`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('offline');
+    const data = await res.json();
+    document.getElementById('connDot').style.background = 'var(--green)';
+    document.getElementById('connText').textContent = 'Server connected';
+    document.getElementById('stepLabel').textContent = data.step_label || `Step ${data.step}`;
+    if (!editingConfig && data.config) {
+      cfgStep1Text.value = data.config.step1?.narration || '';
+      cfgStep2Text.value = data.config.step2?.narration || '';
+      cfgStep2Timer.value = data.config.step2?.duration_seconds ?? 60;
+      const layers = data.config.mission?.layers || [];
+      if (layers.length) {
+        if (passphraseFields.children.length === 0) {
+          buildPassphraseFields(layers);
+        }
+        fillMissionConfig(data.config.mission);
+      }
+    }
+    document.getElementById('btnStart').disabled = data.step !== 0;
+    renderTeams(data.teams || []);
+  } catch (_) {
+    document.getElementById('connDot').style.background = 'var(--red)';
+    document.getElementById('connText').textContent = 'Server offline';
+  }
+}
+
+buildPassphraseFields([
+  { id: 1, name: 'FIREWALL' },
+  { id: 2, name: 'PROTOCOL' },
+  { id: 3, name: 'SERVER' },
+  { id: 4, name: 'SPRINT' },
+  { id: 5, name: 'SHUTDOWN' },
+]);
+refresh();
+setInterval(refresh, POLL_MS);
+</script>
+</body>
+</html>

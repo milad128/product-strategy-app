@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GM Guide — PROTOCOL: OVERRIDE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0d0c;
+    --panel: #111614;
+    --border: #1ea862;
+    --green: #00ff7a;
+    --green-dim: #5a8a72;
+    --amber: #ffb627;
+    --red: #ff003c;
+    --text: #c8ffd9;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--mono);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px 24px 48px;
+    line-height: 1.65;
+    font-size: 13px;
+  }
+  .top-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 20px;
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+  .top-nav a { color: var(--green); text-decoration: none; }
+  .top-nav a:hover { text-decoration: underline; }
+  h1 {
+    font-size: 22px;
+    color: var(--green);
+    letter-spacing: 4px;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    font-size: 11px;
+    color: var(--green-dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .intro {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--panel);
+    padding: 16px 18px;
+    margin-bottom: 24px;
+    color: var(--text);
+  }
+  .intro p + p { margin-top: 10px; }
+  .toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .toc a {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--green-dim);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 6px 10px;
+    text-decoration: none;
+  }
+  .toc a:hover { color: var(--green); border-color: var(--green); }
+  .step-card {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--panel);
+    margin-bottom: 18px;
+    overflow: hidden;
+  }
+  .step-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(30, 168, 98, 0.35);
+    background: rgba(0, 0, 0, 0.25);
+  }
+  .step-num {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--amber);
+  }
+  .step-title {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: var(--green);
+  }
+  .step-screen {
+    font-size: 10px;
+    color: var(--green-dim);
+    letter-spacing: 2px;
+    margin-left: auto;
+  }
+  .step-body { padding: 16px 18px 18px; }
+  .step-body h3 {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--green-dim);
+    margin: 16px 0 8px;
+  }
+  .step-body h3:first-child { margin-top: 0; }
+  .step-body ul, .step-body ol {
+    margin: 0 0 0 18px;
+    color: var(--text);
+  }
+  .step-body li + li { margin-top: 6px; }
+  .gm-do {
+    border-left: 3px solid var(--green);
+    padding: 10px 14px;
+    background: rgba(0, 255, 122, 0.06);
+    margin-top: 12px;
+  }
+  .gm-do strong {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--green);
+    margin-bottom: 6px;
+  }
+  .note {
+    border-left: 3px solid var(--amber);
+    padding: 10px 14px;
+    background: rgba(255, 182, 39, 0.06);
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .ref-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    margin-top: 8px;
+  }
+  .ref-box {
+    border: 1px solid rgba(30, 168, 98, 0.35);
+    border-radius: 3px;
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .ref-box h4 {
+    font-size: 11px;
+    color: var(--amber);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  code {
+    font-size: 11px;
+    color: var(--green);
+    background: rgba(0, 0, 0, 0.35);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+  .checklist { list-style: none; margin: 0; padding: 0; }
+  .checklist li {
+    padding: 6px 0 6px 22px;
+    position: relative;
+    border-bottom: 1px solid rgba(30, 168, 98, 0.15);
+  }
+  .checklist li::before {
+    content: '□';
+    position: absolute;
+    left: 0;
+    color: var(--green-dim);
+  }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="/gamemaster">← Control panel</a>
+  <a href="/" target="_blank">Open game screen ↗</a>
+  <a href="/gamemaster/routes" target="_blank">Routes cheat sheet ↗</a>
+</nav>
+
+<h1>GM GUIDE</h1>
+<div class="subtitle">PROTOCOL: OVERRIDE · Step-by-step playbook</div>
+
+<div class="intro">
+  <p>This game runs on <strong>two screens</strong>: the <strong>projector</strong> shows the game page (<code>/game</code>). You run the <strong>Game Master panel</strong> on your laptop (<code>/gamemaster</code>).</p>
+  <p>Players advance most steps on the projector. Your job is to configure the session, start the game, monitor teams and scores, run the mission timer, and intervene when needed.</p>
+  <p>All progress is saved in <code>aria_game.db</code>. Use <strong>Reboot</strong> or <strong>Reset act</strong> only when you mean to clear data.</p>
+</div>
+
+<nav class="toc">
+  <a href="#prep">Before the game</a>
+  <a href="#step0">Step 0</a>
+  <a href="#step1">Step 1</a>
+  <a href="#step2">Step 2</a>
+  <a href="#step3">Step 3</a>
+  <a href="#tools">GM tools</a>
+  <a href="#checklist">Day-of checklist</a>
+</nav>
+
+<!-- BEFORE -->
+<section class="step-card" id="prep">
+  <div class="step-head">
+    <span class="step-num">PREP</span>
+    <span class="step-title">Before the game</span>
+    <span class="step-screen">Control panel · configuration</span>
+  </div>
+  <div class="step-body">
+    <h3>What happens</h3>
+    <p>The server is idle. The projector shows a white screen with <strong>START</strong>. No teams or scores exist yet (unless you resumed a saved session).</p>
+
+    <h3>What you should do</h3>
+    <ol>
+      <li>Start the server: <code>python aria_game/server.py</code></li>
+      <li>Open the projector on <code>/game</code> (full screen).</li>
+      <li>Open <code>/gamemaster</code> on your laptop.</li>
+      <li>In <strong>General configuration</strong>, set:
+        <ul>
+          <li><strong>Mission timer</strong> (minutes) — countdown shown in Step 3.</li>
+          <li><strong>Mission names</strong> and <strong>passphrases</strong> for all 5 missions.</li>
+        </ul>
+      </li>
+      <li>In <strong>Step configuration</strong>, set Persian ARIA text for Step 1 and Step 2, and the Step 2 registration timer (seconds).</li>
+      <li>Click <strong>Save</strong> on each section after editing.</li>
+      <li>Open <a href="/gamemaster/routes" target="_blank"><code>/gamemaster/routes</code></a> and keep the secret URLs + passphrases for your physical puzzles. Do not show this to players.</li>
+      <li>If testing earlier, click <strong>Reboot</strong> to clear teams and scores before guests arrive.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- STEP 0 -->
+<section class="step-card" id="step0">
+  <div class="step-head">
+    <span class="step-num">STEP 0</span>
+    <span class="step-title">Start</span>
+    <span class="step-screen">Projector · white screen</span>
+  </div>
+  <div class="step-body">
+    <h3>What happens</h3>
+    <p>The projector displays a minimal white page with a <strong>START</strong> button. Nothing else runs yet.</p>
+
+    <h3>What you should do</h3>
+    <div class="gm-do">
+      <strong>Your action</strong>
+      Click <strong>Start</strong> in the control panel — <em>or</em> let a player click <strong>START</strong> on the projector. Either starts Step 1.
+    </div>
+    <p>The control panel <strong>Start</strong> button is only enabled while the game is idle (Step 0).</p>
+  </div>
+</section>
+
+<!-- STEP 1 -->
+<section class="step-card" id="step1">
+  <div class="step-head">
+    <span class="step-num">STEP 1</span>
+    <span class="step-title">ARIA intro</span>
+    <span class="step-screen">Projector · Matrix theme</span>
+  </div>
+  <div class="step-body">
+    <h3>What happens</h3>
+    <ul>
+      <li>Matrix-style visuals appear on the projector.</li>
+      <li>ARIA speaks the <strong>Step 1 Persian narration</strong> (neural TTS).</li>
+      <li>Text types on screen. An <strong>Accept &amp; continue</strong> button appears when ready.</li>
+    </ul>
+
+    <h3>What you should do</h3>
+    <div class="gm-do">
+      <strong>Your action</strong>
+      Let the narration finish. You can edit Step 1 text beforehand in the control panel if needed. When the room is ready, have someone click <strong>Accept &amp; continue</strong> on the projector to move to Step 2.
+    </div>
+    <div class="note">You do not click anything on the control panel to leave Step 1 — advancement is triggered from the game screen.</div>
+  </div>
+</section>
+
+<!-- STEP 2 -->
+<section class="step-card" id="step2">
+  <div class="step-head">
+    <span class="step-num">STEP 2</span>
+    <span class="step-title">Team building</span>
+    <span class="step-screen">Projector · registration form</span>
+  </div>
+  <div class="step-body">
+    <h3>What happens</h3>
+    <ul>
+      <li>ARIA plays the <strong>Step 2 Persian narration</strong>.</li>
+      <li>A <strong>registration countdown</strong> runs (duration from Step 2 config).</li>
+      <li>Players enter <strong>4 team names</strong> and up to <strong>6 members per team</strong> on the projector.</li>
+      <li><strong>If they register in time:</strong> teams and members are saved exactly as entered.</li>
+      <li><strong>If time expires:</strong> an alarm plays, the button becomes <strong>Enter the teams</strong>, and members are <strong>shuffled</strong> across the named teams (max 6 per team). ARIA plays a Persian “you failed to collaborate” line.</li>
+      <li>Registered teams appear on the control panel under <strong>Teams &amp; scores</strong>.</li>
+    </ul>
+
+    <h3>What you should do</h3>
+    <div class="gm-do">
+      <strong>Your action</strong>
+      <ol>
+        <li>Encourage squads to agree on names and enter members before the timer ends.</li>
+        <li>Watch the control panel to confirm all four teams registered.</li>
+        <li>After teams are shown, have someone click <strong>Continue to mission</strong> on the projector to start Step 3.</li>
+      </ol>
+    </div>
+    <div class="note">If registration goes wrong, use <strong>Reset act</strong> (keeps teams, clears scores, restarts current step) or <strong>Reboot</strong> (full wipe except your saved config).</div>
+  </div>
+</section>
+
+<!-- STEP 3 -->
+<section class="step-card" id="step3">
+  <div class="step-head">
+    <span class="step-num">STEP 3</span>
+    <span class="step-title">Missions</span>
+    <span class="step-screen">Projector · timer · leaderboard · mission board</span>
+  </div>
+  <div class="step-body">
+    <h3>What happens</h3>
+    <ul>
+      <li><strong>Mission timer</strong> counts down at the top (duration from General configuration).</li>
+      <li><strong>Protocol phrase</strong> shows blank word slots; each word reveals when any team completes that mission.</li>
+      <li><strong>Leaderboard</strong> ranks squads by score and missions cleared.</li>
+      <li><strong>Mission board</strong> lists all 5 missions with status: ARMED → ACTIVE → BREACHED.</li>
+      <li>Squads must <strong>discover</strong> each mission’s secret URL and passphrase from in-room puzzles, then POST:
+        <code>{ "squad": "TEAMNAME", "passphrase": "WORD" }</code>
+      </li>
+      <li>First squad to breach a mission earns the most points (3 / 2 / 1 / 0 by rank).</li>
+      <li>When a squad clears all 5 layers, the game ends and a winner is declared.</li>
+    </ul>
+
+    <h3>What you should do</h3>
+    <div class="gm-do">
+      <strong>Your action</strong>
+      <ol>
+        <li>Start the mission timer when gameplay begins:
+          <code>curl -X POST http://localhost:8765/gm/timer/start</code>
+          (use your laptop’s LAN IP if running curl from another machine).</li>
+        <li>Give squads physical clues that lead to each route on the <a href="/gamemaster/routes" target="_blank">routes cheat sheet</a> — never put the cheat sheet on the projector.</li>
+        <li>Monitor the leaderboard and mission board on the projector.</li>
+        <li>Pause or resume the timer if needed:
+          <code>/gm/timer/pause</code> · <code>/gm/timer/resume</code></li>
+        <li>Adjust scores for bonuses or penalties:
+          <code>/gm/score/adjust</code> with <code>squad</code>, <code>delta</code>, <code>reason</code></li>
+        <li>Push dramatic messages to the transmission log:
+          <code>/gm/transmission</code></li>
+      </ol>
+    </div>
+    <div class="note">Squad names on the API must match the team names registered in Step 2 (case-insensitive).</div>
+  </div>
+</section>
+
+<!-- TOOLS -->
+<section class="step-card" id="tools">
+  <div class="step-head">
+    <span class="step-num">REF</span>
+    <span class="step-title">GM tools reference</span>
+    <span class="step-screen">Control panel buttons</span>
+  </div>
+  <div class="step-body">
+    <div class="ref-grid">
+      <div class="ref-box">
+        <h4>Start</h4>
+        Step 0 → Step 1. Same as projector START. Disabled after the game has begun.
+      </div>
+      <div class="ref-box">
+        <h4>Reset act</h4>
+        Clears mission scores and progress. Stays on the current step. <strong>Keeps registered teams.</strong> Restarts Step 2 timer if you are on team building.
+      </div>
+      <div class="ref-box">
+        <h4>Reboot</h4>
+        Full reset to Step 0. Clears teams, scores, and leaderboard. <strong>Keeps</strong> all GM configuration (steps + missions).
+      </div>
+      <div class="ref-box">
+        <h4>Save configs</h4>
+        General + Step 1 + Step 2 settings persist in SQLite. Edit anytime; mission timer duration updates before the timer is started.
+      </div>
+      <div class="ref-box">
+        <h4>Routes cheat sheet</h4>
+        Secret POST paths and passphrases at <code>/gamemaster/routes</code>. For GM eyes only.
+      </div>
+      <div class="ref-box">
+        <h4>Teams &amp; scores</h4>
+        Live view of registered squads, members, per-act ranks, and total points.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CHECKLIST -->
+<section class="step-card" id="checklist">
+  <div class="step-head">
+    <span class="step-num">CHECK</span>
+    <span class="step-title">Day-of checklist</span>
+    <span class="step-screen">Print or skim before guests arrive</span>
+  </div>
+  <div class="step-body">
+    <ul class="checklist">
+      <li>Server running · projector on <code>/game</code> full screen</li>
+      <li>GM laptop on <code>/gamemaster</code> · status bar shows “Server connected”</li>
+      <li>Mission timer, names, and passphrases saved in General configuration</li>
+      <li>Step 1 &amp; 2 Persian narrations saved · Step 2 registration timer set</li>
+      <li><a href="/gamemaster/routes" target="_blank">Routes cheat sheet</a> saved or printed for puzzle setup</li>
+      <li><strong>Reboot</strong> run once to clear test data</li>
+      <li>Wi-Fi works · squads can reach <code>http://&lt;your-ip&gt;:8765</code></li>
+      <li>Click <strong>Start</strong> when briefing begins</li>
+      <li>After Step 2, confirm <strong>Continue to mission</strong> on projector</li>
+      <li>Run <code>/gm/timer/start</code> when Step 3 missions go live</li>
+    </ul>
+  </div>
+</section>
+
+</body>
+</html>
