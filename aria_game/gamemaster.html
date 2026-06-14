@@ -125,6 +125,27 @@
     border-color: rgba(251, 113, 133, 0.35);
   }
   .btn-reboot:hover:not(:disabled) { background: rgba(251, 113, 133, 0.25); }
+  .btn-pause {
+    color: var(--amber);
+    background: var(--amber-soft);
+    border-color: rgba(251, 191, 36, 0.35);
+  }
+  .btn-pause:hover:not(:disabled) { background: rgba(251, 191, 36, 0.2); }
+  .btn-resume {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.35);
+  }
+  .btn-resume:hover:not(:disabled) { background: rgba(16, 185, 129, 0.22); }
+  .timer-controls[hidden] { display: none; }
+  .timer-status {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    margin: -4px 0 12px;
+    text-align: center;
+  }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn-hint {
     font-size: 10px;
@@ -310,6 +331,85 @@
     text-transform: uppercase;
     font-weight: 600;
   }
+  .mission-config-row .config-field.instruction-field {
+    grid-column: 1 / -1;
+  }
+  .mission-config-row .config-field.instruction-field textarea {
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.6;
+    direction: ltr;
+    text-align: left;
+    min-height: 88px;
+    resize: vertical;
+    width: 100%;
+    background: rgba(3, 7, 18, 0.6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--text);
+    padding: 10px 12px;
+  }
+  .instruction-cipher-block {
+    grid-column: 1 / -1;
+    margin-top: 2px;
+  }
+  .instruction-cipher-block > label {
+    display: block;
+    font-family: var(--sans);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .cipher-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .cipher-row textarea {
+    flex: 1;
+    font-family: var(--sans);
+    font-size: 12px;
+    line-height: 1.65;
+    min-height: 160px;
+    resize: vertical;
+    background: rgba(3, 7, 18, 0.75);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--cyan);
+    padding: 10px 12px;
+    cursor: default;
+  }
+  .btn-copy {
+    align-self: flex-start;
+    white-space: nowrap;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding: 10px 14px;
+    color: var(--violet);
+    background: rgba(167, 139, 250, 0.1);
+    border: 1px solid var(--violet);
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    font-family: var(--sans);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .btn-copy:hover:not(:disabled) { background: rgba(167, 139, 250, 0.18); }
+  .btn-copy.copied { color: #10b981; border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+  .cipher-hint {
+    margin: 8px 0 0;
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    padding: 10px 12px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-xs);
+    background: rgba(0, 229, 255, 0.03);
+  }
+  .cipher-hint strong { color: var(--cyan); }
   .mission-encoding {
     grid-column: 1 / -1;
     display: grid;
@@ -385,6 +485,13 @@
       <button type="button" class="btn btn-reboot" id="btnReboot">Reboot</button>
       <p class="btn-hint">Clear teams, scores &amp; leaderboard. GM settings are kept.</p>
 
+      <div class="timer-controls" id="timerControls" hidden>
+        <p class="timer-status" id="timerStatus">Mission timer —</p>
+        <button type="button" class="btn btn-pause" id="btnPauseGame">PAUSE GAME</button>
+        <button type="button" class="btn btn-resume" id="btnResumeGame" hidden>RESUME GAME</button>
+        <p class="btn-hint">Pause saves the remaining time. Resume continues from that value.</p>
+      </div>
+
       <div class="msg" id="actionMsg"></div>
     </div>
 
@@ -411,26 +518,20 @@
           Digits update when you save. Use them in room puzzles — teams decode to the passphrase.
         </div>
         <div class="config-block" style="margin-bottom:12px">
-          <h3 style="font-size:11px;letter-spacing:2px;color:var(--amber);margin-bottom:8px">Digit entry scores (by order)</h3>
+          <h3 style="font-size:11px;letter-spacing:2px;color:var(--amber);margin-bottom:8px">Digit entry scores</h3>
           <p class="mapping-legend" style="margin-bottom:8px">
-            Points awarded when a team submits a correct digit. 1st team gets rank #1 score, etc.
+            When a team submits a correct digit in a mission, scoring is by speed across
+            <strong>all digit entries in that mission</strong>: 1st entry → Max,
+            2nd entry → Max − Minus, 3rd → Max − (2×Minus), and so on (any digit slot).
           </p>
           <div class="digit-scores-grid">
             <div class="config-field">
-              <label for="cfgDigitScore1">1st team</label>
-              <input type="number" id="cfgDigitScore1" min="0" max="9999" value="100" />
+              <label for="cfgDigitMaxScore">Max score</label>
+              <input type="number" id="cfgDigitMaxScore" min="0" max="9999" value="100" />
             </div>
             <div class="config-field">
-              <label for="cfgDigitScore2">2nd team</label>
-              <input type="number" id="cfgDigitScore2" min="0" max="9999" value="80" />
-            </div>
-            <div class="config-field">
-              <label for="cfgDigitScore3">3rd team</label>
-              <input type="number" id="cfgDigitScore3" min="0" max="9999" value="50" />
-            </div>
-            <div class="config-field">
-              <label for="cfgDigitScore4">4th team</label>
-              <input type="number" id="cfgDigitScore4" min="0" max="9999" value="20" />
+              <label for="cfgDigitMinusScore">Minus score</label>
+              <input type="number" id="cfgDigitMinusScore" min="0" max="9999" value="20" />
             </div>
           </div>
           <div class="config-field" style="margin-top:10px">
@@ -438,7 +539,9 @@
             <input type="number" id="cfgDigitWrongPenalty" min="0" max="9999" value="1" />
           </div>
         </div>
-        <div class="passphrase-grid" id="passphraseFields"></div>
+        <div class="passphrase-grid" id="passphraseFields">
+          <p class="mapping-legend" style="margin:0">Loading mission configuration…</p>
+        </div>
         <button type="button" class="btn btn-save" id="btnSaveMission" style="margin-top:12px">Save general config</button>
         <div class="config-msg" id="cfgMissionMsg"></div>
       </div>
@@ -467,6 +570,17 @@
           <label for="cfgStep2Timer">Registration timer (seconds)</label>
           <input type="number" id="cfgStep2Timer" min="5" max="600" value="60" />
         </div>
+        <div class="config-field">
+          <label for="cfgStep2Teams">Number of teams</label>
+          <input type="number" id="cfgStep2Teams" min="2" max="8" value="4" />
+        </div>
+        <div class="config-field">
+          <label for="cfgStep2Players">Number of players</label>
+          <input type="number" id="cfgStep2Players" min="4" max="64" value="24" />
+        </div>
+        <p class="mapping-legend" id="cfgStep2MembersHint" style="margin-top:4px">
+          Up to 6 members per team (based on players ÷ teams).
+        </p>
         <button type="button" class="btn btn-save" id="btnSaveStep2">Save step 2</button>
         <div class="config-msg" id="cfgStep2Msg"></div>
       </div>
@@ -489,15 +603,92 @@ const msgEl = document.getElementById('actionMsg');
 const cfgStep1Text = document.getElementById('cfgStep1Text');
 const cfgStep2Text = document.getElementById('cfgStep2Text');
 const cfgStep2Timer = document.getElementById('cfgStep2Timer');
+const cfgStep2Teams = document.getElementById('cfgStep2Teams');
+const cfgStep2Players = document.getElementById('cfgStep2Players');
+const cfgStep2MembersHint = document.getElementById('cfgStep2MembersHint');
 const cfgMissionTimer = document.getElementById('cfgMissionTimer');
-const cfgDigitScore1 = document.getElementById('cfgDigitScore1');
-const cfgDigitScore2 = document.getElementById('cfgDigitScore2');
-const cfgDigitScore3 = document.getElementById('cfgDigitScore3');
-const cfgDigitScore4 = document.getElementById('cfgDigitScore4');
+const cfgDigitMaxScore = document.getElementById('cfgDigitMaxScore');
+const cfgDigitMinusScore = document.getElementById('cfgDigitMinusScore');
 const cfgDigitWrongPenalty = document.getElementById('cfgDigitWrongPenalty');
 const passphraseFields = document.getElementById('passphraseFields');
 let editingConfig = false;
+let editingStep2Config = false;
+let editingMissionConfig = false;
 let missionLayers = [];
+let m1ResolvedInstruction = '';
+let m1CipherTimer = null;
+
+function markEditingStep2Config() {
+  editingStep2Config = true;
+  editingConfig = true;
+}
+
+function markEditingMissionConfig() {
+  editingMissionConfig = true;
+}
+
+function getStoredInstruction(instructions, layerId) {
+  const key = String(layerId);
+  if (Object.prototype.hasOwnProperty.call(instructions, key)) {
+    return instructions[key];
+  }
+  if (Object.prototype.hasOwnProperty.call(instructions, layerId)) {
+    return instructions[layerId];
+  }
+  return undefined;
+}
+
+async function updateM1InstructionCipher() {
+  const instrInput = document.getElementById('cfgInstr1');
+  const cipherEl = document.getElementById('cfgInstrCipher1');
+  if (!cipherEl) return;
+  const typed = (instrInput?.value || '').trim();
+  const source = typed || m1ResolvedInstruction;
+  if (!source) {
+    cipherEl.value = '';
+    return;
+  }
+  clearTimeout(m1CipherTimer);
+  m1CipherTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`${API}/gm/mission/1/instruction-cipher`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: source }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        cipherEl.value = data.cipher || '';
+      }
+    } catch {
+      cipherEl.value = '';
+    }
+  }, 150);
+}
+
+async function copyM1InstructionCipher() {
+  const cipherEl = document.getElementById('cfgInstrCipher1');
+  const btn = document.getElementById('btnCopyCipher1');
+  if (!cipherEl?.value || !btn) return;
+  try {
+    await navigator.clipboard.writeText(cipherEl.value);
+    btn.textContent = 'Copied';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  } catch {
+    cipherEl.select();
+    document.execCommand('copy');
+    btn.textContent = 'Copied';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  }
+}
 
 function buildPassphraseFields(layers) {
   missionLayers = layers || [];
@@ -512,6 +703,26 @@ function buildPassphraseFields(layers) {
         <label for="cfgPass${layer.id}">Passphrase</label>
         <input type="text" id="cfgPass${layer.id}" maxlength="32" autocomplete="off" />
       </div>
+      <div class="config-field instruction-field">
+        <label for="cfgInstr${layer.id}">Player instruction</label>
+        <textarea id="cfgInstr${layer.id}" rows="4" placeholder="Instructions shown to teams when this mission is active…"></textarea>
+      </div>
+      ${layer.id === 1 ? `
+      <div class="instruction-cipher-block">
+        <label for="cfgInstrCipher1">Enciphered instruction (send to players)</label>
+        <div class="cipher-row">
+          <textarea id="cfgInstrCipher1" rows="8" readonly spellcheck="false" aria-readonly="true"></textarea>
+          <button type="button" class="btn-copy" id="btnCopyCipher1">Copy</button>
+        </div>
+        <p class="cipher-hint">
+          <strong>Decipher hint for players:</strong>
+          This is a long ARIA briefing — the real Mission 1 instruction is hidden inside.
+          Read the <strong>first letter of each sentence</strong> in order to recover the message
+          (spaces are not marked — use AI or LLM tools to separate the words).
+          This cipher is unrelated to the passphrase digit mapping.
+        </p>
+      </div>
+      ` : ''}
       <div class="mission-encoding">
         <div class="encoding-block">
           <label>Mapping used</label>
@@ -525,23 +736,36 @@ function buildPassphraseFields(layers) {
     </div>
   `).join('');
   missionLayers.forEach(layer => {
-    [`cfgName${layer.id}`, `cfgPass${layer.id}`].forEach(id => {
+    [`cfgName${layer.id}`, `cfgPass${layer.id}`, `cfgInstr${layer.id}`].forEach(id => {
       const input = document.getElementById(id);
-      input.addEventListener('focus', () => { editingConfig = true; });
+      input.addEventListener('focus', () => {
+        editingConfig = true;
+        markEditingMissionConfig();
+      });
+      input.addEventListener('input', markEditingMissionConfig);
       input.addEventListener('blur', () => {
         setTimeout(() => {
           const active = document.activeElement;
           const editingMission = active?.id?.startsWith('cfgName')
-            || active?.id?.startsWith('cfgPass');
-          if (![cfgStep1Text, cfgStep2Text, cfgStep2Timer, cfgMissionTimer].includes(active)
+            || active?.id?.startsWith('cfgPass')
+            || active?.id?.startsWith('cfgInstr');
+          if (![cfgStep1Text, cfgStep2Text, cfgStep2Timer, cfgStep2Teams, cfgStep2Players,
+                cfgMissionTimer, cfgDigitMaxScore, cfgDigitMinusScore, cfgDigitWrongPenalty]
+              .includes(active)
               && !editingMission) {
             editingConfig = false;
           }
         }, 100);
       });
     });
+    if (layer.id === 1) {
+      const instrInput = document.getElementById('cfgInstr1');
+      instrInput?.addEventListener('input', updateM1InstructionCipher);
+      document.getElementById('btnCopyCipher1')?.addEventListener('click', copyM1InstructionCipher);
+    }
     updateLayerEncodingDisplay(layer);
   });
+  updateM1InstructionCipher();
 }
 
 function updateLayerEncodingDisplay(layer) {
@@ -555,49 +779,105 @@ function updateLayerEncodingDisplay(layer) {
 function fillMissionConfig(mission) {
   if (!mission) return;
   cfgMissionTimer.value = Math.max(1, Math.round((mission.duration_seconds || 10800) / 60));
-  const scores = mission.digit_scores_by_rank || {};
-  cfgDigitScore1.value = scores['1'] ?? scores[1] ?? 100;
-  cfgDigitScore2.value = scores['2'] ?? scores[2] ?? 80;
-  cfgDigitScore3.value = scores['3'] ?? scores[3] ?? 50;
-  cfgDigitScore4.value = scores['4'] ?? scores[4] ?? 20;
+  cfgDigitMaxScore.value = mission.digit_max_score ?? 100;
+  cfgDigitMinusScore.value = mission.digit_minus_score ?? 20;
   cfgDigitWrongPenalty.value = mission.digit_wrong_penalty ?? 1;
   const phrases = mission.passphrases || {};
   const names = mission.names || {};
+  const instructions = mission.instructions || {};
   const layerMeta = {};
   (mission.layers || []).forEach(l => { layerMeta[l.id] = l; });
   missionLayers.forEach(layer => {
     const meta = layerMeta[layer.id] || layer;
     const passInput = document.getElementById(`cfgPass${layer.id}`);
     const nameInput = document.getElementById(`cfgName${layer.id}`);
+    const instrInput = document.getElementById(`cfgInstr${layer.id}`);
     if (passInput) {
       passInput.value = phrases[String(layer.id)] || phrases[layer.id] || meta.passphrase || '';
     }
     if (nameInput) {
       nameInput.value = names[String(layer.id)] || names[layer.id] || meta.name || layer.name || '';
     }
+    if (instrInput) {
+      const stored = getStoredInstruction(instructions, layer.id);
+      instrInput.value = stored !== undefined ? stored : '';
+    }
+    if (layer.id === 1) {
+      const stored = getStoredInstruction(instructions, layer.id);
+      const typed = stored !== undefined ? String(stored).trim() : '';
+      m1ResolvedInstruction = typed || (meta.instruction || '').trim();
+    }
     updateLayerEncodingDisplay(meta);
   });
+  updateM1InstructionCipher();
+}
+
+function getMissionLayerIds() {
+  if (missionLayers.length) {
+    return missionLayers.map((layer) => layer.id);
+  }
+  return [...passphraseFields.querySelectorAll('.mission-config-row')]
+    .map((row) => parseInt(row.dataset.missionId, 10))
+    .filter((id) => !Number.isNaN(id));
+}
+
+function applyInstructionsToForm(instructions) {
+  if (!instructions) return;
+  getMissionLayerIds().forEach((layerId) => {
+    const key = String(layerId);
+    if (!Object.prototype.hasOwnProperty.call(instructions, key)
+        && !Object.prototype.hasOwnProperty.call(instructions, layerId)) {
+      return;
+    }
+    const text = instructions[key] ?? instructions[layerId] ?? '';
+    const el = document.getElementById(`cfgInstr${layerId}`);
+    if (el) el.value = text;
+  });
+  const instr1 = instructions['1'] ?? instructions[1] ?? '';
+  if (instr1 !== undefined) {
+    m1ResolvedInstruction = String(instr1).trim() || m1ResolvedInstruction;
+  }
+  updateM1InstructionCipher();
+}
+
+function applySavedMissionConfig(saved) {
+  if (!saved) return;
+  if (saved.encodings) {
+    missionLayers.forEach(layer => {
+      const enc = saved.encodings[String(layer.id)];
+      if (enc) {
+        updateLayerEncodingDisplay({ id: layer.id, ...enc });
+      }
+    });
+  }
+  if (saved.instructions) {
+    applyInstructionsToForm(saved.instructions);
+  }
+  if (saved.instruction_cipher) {
+    const cipherEl = document.getElementById('cfgInstrCipher1');
+    if (cipherEl) cipherEl.value = saved.instruction_cipher;
+  }
 }
 
 function collectMissionConfig() {
   const passphrases = {};
   const names = {};
-  missionLayers.forEach(layer => {
-    const passInput = document.getElementById(`cfgPass${layer.id}`);
-    const nameInput = document.getElementById(`cfgName${layer.id}`);
-    passphrases[String(layer.id)] = (passInput?.value || '').trim().toUpperCase();
-    names[String(layer.id)] = (nameInput?.value || '').trim().toUpperCase();
+  const instructions = {};
+  getMissionLayerIds().forEach((layerId) => {
+    const passInput = document.getElementById(`cfgPass${layerId}`);
+    const nameInput = document.getElementById(`cfgName${layerId}`);
+    const instrInput = document.getElementById(`cfgInstr${layerId}`);
+    passphrases[String(layerId)] = (passInput?.value || '').trim().toUpperCase();
+    names[String(layerId)] = (nameInput?.value || '').trim().toUpperCase();
+    instructions[String(layerId)] = (instrInput?.value || '').trim();
   });
   return {
     duration_seconds: Math.max(60, (parseInt(cfgMissionTimer.value, 10) || 180) * 60),
     passphrases,
     names,
-    digit_scores_by_rank: {
-      '1': parseInt(cfgDigitScore1.value, 10) || 0,
-      '2': parseInt(cfgDigitScore2.value, 10) || 0,
-      '3': parseInt(cfgDigitScore3.value, 10) || 0,
-      '4': parseInt(cfgDigitScore4.value, 10) || 0,
-    },
+    instructions,
+    digit_max_score: parseInt(cfgDigitMaxScore.value, 10) || 0,
+    digit_minus_score: parseInt(cfgDigitMinusScore.value, 10) || 0,
     digit_wrong_penalty: parseInt(cfgDigitWrongPenalty.value, 10) || 0,
   };
 }
@@ -629,21 +909,58 @@ async function postJson(path, body) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(typeof data.detail === 'string' ? data.detail : 'Request failed');
+    const detail = data.detail;
+    const message = typeof detail === 'string'
+      ? detail
+      : Array.isArray(detail)
+        ? detail.map((e) => e.msg || JSON.stringify(e)).join('; ')
+        : 'Request failed';
+    throw new Error(message);
   }
   return data;
 }
 
-[cfgStep1Text, cfgStep2Text, cfgStep2Timer, cfgMissionTimer,
- cfgDigitScore1, cfgDigitScore2, cfgDigitScore3, cfgDigitScore4,
- cfgDigitWrongPenalty].forEach(el => {
-  el.addEventListener('focus', () => { editingConfig = true; });
+function updateStep2MembersHint() {
+  const teams = Math.max(2, parseInt(cfgStep2Teams.value, 10) || 4);
+  const players = Math.max(teams, parseInt(cfgStep2Players.value, 10) || 24);
+  const perTeam = Math.max(1, Math.min(6, Math.ceil(players / teams)));
+  cfgStep2MembersHint.textContent =
+    `Up to ${perTeam} member${perTeam === 1 ? '' : 's'} per team (${players} players ÷ ${teams} teams).`;
+}
+
+function fillStep2Config(step2) {
+  if (!step2) return;
+  cfgStep2Text.value = step2.narration || '';
+  cfgStep2Timer.value = step2.duration_seconds ?? 60;
+  cfgStep2Teams.value = step2.team_count ?? 4;
+  cfgStep2Players.value = step2.player_count ?? 24;
+  updateStep2MembersHint();
+}
+
+[cfgStep1Text, cfgStep2Text, cfgStep2Timer, cfgStep2Teams, cfgStep2Players].forEach(el => {
+  el.addEventListener('focus', markEditingStep2Config);
+  el.addEventListener('input', markEditingStep2Config);
+});
+
+[cfgStep2Teams, cfgStep2Players].forEach(el => {
+  el.addEventListener('input', updateStep2MembersHint);
+});
+
+[cfgMissionTimer, cfgDigitMaxScore, cfgDigitMinusScore, cfgDigitWrongPenalty].forEach(el => {
+  el.addEventListener('focus', () => {
+    editingConfig = true;
+    markEditingMissionConfig();
+  });
+  el.addEventListener('input', markEditingMissionConfig);
   el.addEventListener('blur', () => {
     setTimeout(() => {
       const active = document.activeElement;
       const editingMission = active?.id?.startsWith('cfgName')
-        || active?.id?.startsWith('cfgPass');
-      if (![cfgStep1Text, cfgStep2Text, cfgStep2Timer, cfgMissionTimer].includes(active)
+        || active?.id?.startsWith('cfgPass')
+        || active?.id?.startsWith('cfgInstr');
+      if (![cfgStep1Text, cfgStep2Text, cfgStep2Timer, cfgStep2Teams, cfgStep2Players,
+            cfgMissionTimer, cfgDigitMaxScore, cfgDigitMinusScore, cfgDigitWrongPenalty]
+          .includes(active)
           && !editingMission) {
         editingConfig = false;
       }
@@ -656,10 +973,22 @@ document.getElementById('btnSaveMission').addEventListener('click', async () => 
   const msg = document.getElementById('cfgMissionMsg');
   btn.disabled = true;
   try {
-    await postJson('/gm/config/mission', collectMissionConfig());
-    setConfigMsg(msg, 'General config saved.', true);
-    editingConfig = false;
-    refresh();
+    const payload = collectMissionConfig();
+    const saved = await postJson('/gm/config/mission', payload);
+    const instructions = saved.instructions ?? payload.instructions;
+    editingMissionConfig = false;
+    await refresh();
+    applyInstructionsToForm(instructions);
+    applySavedMissionConfig({ ...saved, instructions });
+    if (!saved.instructions) {
+      setConfigMsg(
+        msg,
+        'Saved locally, but the running server did not return instructions — restart python server.py to persist them.',
+        false
+      );
+    } else {
+      setConfigMsg(msg, 'General config saved.', true);
+    }
   } catch (e) {
     setConfigMsg(msg, e.message, false);
   } finally {
@@ -687,12 +1016,16 @@ document.getElementById('btnSaveStep2').addEventListener('click', async () => {
   const msg = document.getElementById('cfgStep2Msg');
   btn.disabled = true;
   try {
-    await postJson('/gm/config/step2', {
+    const saved = await postJson('/gm/config/step2', {
       narration: cfgStep2Text.value,
       duration_seconds: parseInt(cfgStep2Timer.value, 10) || 60,
+      team_count: parseInt(cfgStep2Teams.value, 10) || 4,
+      player_count: parseInt(cfgStep2Players.value, 10) || 24,
     });
+    editingStep2Config = false;
+    fillStep2Config(saved);
     setConfigMsg(msg, 'Step 2 saved.', true);
-    editingConfig = false;
+    await refresh();
   } catch (e) {
     setConfigMsg(msg, e.message, false);
   } finally {
@@ -734,6 +1067,72 @@ document.getElementById('btnReboot').addEventListener('click', async () => {
     setMsg(e.message, false);
   }
   refresh();
+});
+
+function fmtTimer(seconds) {
+  const s = Math.max(0, parseInt(seconds, 10) || 0);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  }
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
+
+function updateTimerControls(data) {
+  const panel = document.getElementById('timerControls');
+  const statusEl = document.getElementById('timerStatus');
+  const btnPause = document.getElementById('btnPauseGame');
+  const btnResume = document.getElementById('btnResumeGame');
+  const timer = data.timer || {};
+  const onMission = data.step === 3;
+
+  panel.hidden = !onMission;
+  if (!onMission) return;
+
+  const remaining = timer.remaining_seconds ?? 0;
+  if (timer.paused) {
+    statusEl.textContent = `Mission timer paused — ${fmtTimer(remaining)} remaining`;
+    btnPause.hidden = true;
+    btnResume.hidden = false;
+  } else if (timer.running) {
+    statusEl.textContent = `Mission timer running — ${fmtTimer(remaining)} remaining`;
+    btnPause.hidden = false;
+    btnResume.hidden = true;
+  } else {
+    statusEl.textContent = `Mission timer idle — ${fmtTimer(remaining)}`;
+    btnPause.hidden = true;
+    btnResume.hidden = true;
+  }
+}
+
+document.getElementById('btnPauseGame').addEventListener('click', async () => {
+  const btn = document.getElementById('btnPauseGame');
+  btn.disabled = true;
+  try {
+    const data = await post('/gm/timer/pause');
+    setMsg(`Game paused — ${fmtTimer(data.remaining_seconds)} saved.`, true);
+  } catch (e) {
+    setMsg(e.message, false);
+  } finally {
+    btn.disabled = false;
+    refresh();
+  }
+});
+
+document.getElementById('btnResumeGame').addEventListener('click', async () => {
+  const btn = document.getElementById('btnResumeGame');
+  btn.disabled = true;
+  try {
+    const data = await post('/gm/timer/resume');
+    setMsg(`Game resumed — ${fmtTimer(data.remaining_seconds)} on the clock.`, true);
+  } catch (e) {
+    setMsg(e.message, false);
+  } finally {
+    btn.disabled = false;
+    refresh();
+  }
 });
 
 function renderTeams(teams) {
@@ -783,17 +1182,21 @@ async function refresh() {
     document.getElementById('stepLabel').textContent = data.step_label || `Step ${data.step}`;
     if (!editingConfig && data.config) {
       cfgStep1Text.value = data.config.step1?.narration || '';
-      cfgStep2Text.value = data.config.step2?.narration || '';
-      cfgStep2Timer.value = data.config.step2?.duration_seconds ?? 60;
-      const layers = data.config.mission?.layers || [];
+    }
+    if (!editingStep2Config && data.config?.step2) {
+      fillStep2Config(data.config.step2);
+    }
+    if (!editingMissionConfig && data.config?.mission) {
+      const layers = data.config.mission.layers || [];
       if (layers.length) {
-        if (passphraseFields.children.length === 0) {
+        if (!passphraseFields.querySelector('.mission-config-row')) {
           buildPassphraseFields(layers);
         }
         fillMissionConfig(data.config.mission);
       }
     }
     document.getElementById('btnStart').disabled = data.step !== 0;
+    updateTimerControls(data);
     renderTeams(data.teams || []);
   } catch (_) {
     document.getElementById('connDot').style.background = 'var(--red)';
@@ -801,13 +1204,6 @@ async function refresh() {
   }
 }
 
-buildPassphraseFields([
-  { id: 1, name: 'FIREWALL' },
-  { id: 2, name: 'PROTOCOL' },
-  { id: 3, name: 'SERVER' },
-  { id: 4, name: 'SPRINT' },
-  { id: 5, name: 'SHUTDOWN' },
-]);
 refresh();
 setInterval(refresh, POLL_MS);
 </script>

@@ -68,7 +68,8 @@ LAYERS: dict[int, dict[str, str]] = {
 
 POINTS_BY_RANK: dict[int, int] = {1: 3, 2: 2, 3: 1, 4: 0}
 
-DEFAULT_DIGIT_SCORES_BY_RANK: dict[int, int] = {1: 100, 2: 80, 3: 50, 4: 20}
+DEFAULT_DIGIT_MAX_SCORE: int = 100
+DEFAULT_DIGIT_MINUS_SCORE: int = 20
 DEFAULT_DIGIT_WRONG_PENALTY: int = 1
 MAX_DIGIT_CLAIMS_PER_SLOT: int = 4
 
@@ -142,6 +143,8 @@ def _default_step_config() -> dict:
         "step2": {
             "narration": ACT0_NARRATION,
             "duration_seconds": ACT0_DURATION_SECONDS,
+            "team_count": ACT0_TEAM_COUNT,
+            "player_count": ACT0_TEAM_COUNT * ACT0_MAX_MEMBERS,
         },
         "mission": {
             "duration_seconds": DEFAULT_TIMER_SECONDS,
@@ -151,8 +154,10 @@ def _default_step_config() -> dict:
             "passphrases": {
                 lyr: LAYERS[lyr]["passphrase"] for lyr in LAYERS
             },
-            "digit_scores_by_rank": dict(DEFAULT_DIGIT_SCORES_BY_RANK),
+            "digit_max_score": DEFAULT_DIGIT_MAX_SCORE,
+            "digit_minus_score": DEFAULT_DIGIT_MINUS_SCORE,
             "digit_wrong_penalty": DEFAULT_DIGIT_WRONG_PENALTY,
+            "instructions": {1: ""},
         },
     }
 
@@ -187,17 +192,28 @@ def _ensure_mission_config() -> dict:
         {lyr: LAYERS[lyr]["passphrase"] for lyr in LAYERS},
     )
     mission["passphrases"] = {int(k): str(v).strip() for k, v in raw.items()}
-    raw_scores = mission.setdefault(
-        "digit_scores_by_rank",
-        dict(DEFAULT_DIGIT_SCORES_BY_RANK),
+    if "digit_max_score" not in mission and mission.get("digit_scores_by_rank"):
+        old = mission["digit_scores_by_rank"]
+        r1 = int(old.get(1) or old.get("1") or DEFAULT_DIGIT_MAX_SCORE)
+        r2 = int(old.get(2) or old.get("2") or max(0, r1 - DEFAULT_DIGIT_MINUS_SCORE))
+        mission["digit_max_score"] = r1
+        mission["digit_minus_score"] = max(0, r1 - r2)
+    mission["digit_max_score"] = max(
+        0, int(mission.get("digit_max_score", DEFAULT_DIGIT_MAX_SCORE))
     )
-    mission["digit_scores_by_rank"] = {
-        int(k): int(v) for k, v in raw_scores.items()
-    }
+    mission["digit_minus_score"] = max(
+        0, int(mission.get("digit_minus_score", DEFAULT_DIGIT_MINUS_SCORE))
+    )
     mission.setdefault("digit_wrong_penalty", DEFAULT_DIGIT_WRONG_PENALTY)
     mission["digit_wrong_penalty"] = max(
         0, int(mission["digit_wrong_penalty"])
     )
+    raw_instr = mission.setdefault("instructions", {})
+    mission["instructions"] = {
+        int(k): str(v).strip() for k, v in raw_instr.items()
+    }
+    for lyr in LAYERS:
+        mission["instructions"].setdefault(lyr, "")
     return mission
 
 
@@ -219,6 +235,30 @@ def get_layer_passphrase(layer: int) -> str:
     ).upper().strip()
 
 
+def _build_default_m1_instruction(phrase: str | None = None) -> str:
+    word = (phrase or LAYERS[1]["passphrase"]).upper().strip()
+    mapping = get_layer_mapping_type(1)
+    encoded = encode_passphrase_digits(word, mapping)
+    digit_count = len([p for p in encoded.split("·") if p.strip()]) if encoded else 0
+    envelope_count = digit_count + 1
+    return (
+        f"Search the room for hidden envelopes. We have placed {envelope_count} "
+        f"envelopes ({digit_count} mission digits + 1 extra). Find every envelope, "
+        f"decode each digit clue inside, and enter each code on the mission board."
+    )
+
+
+def get_layer_instruction(layer: int) -> str:
+    mission = _ensure_mission_config()
+    raw = mission.get("instructions", {})
+    custom = str(raw.get(layer) or raw.get(str(layer)) or "").strip()
+    if custom:
+        return custom
+    if layer == 1:
+        return _build_default_m1_instruction(get_layer_passphrase(1))
+    return ""
+
+
 def get_layer_mapping_type(layer: int) -> str:
     return MISSION_MAPPING_TYPES[(layer - 1) % len(MISSION_MAPPING_TYPES)]
 
@@ -226,6 +266,98 @@ def get_layer_mapping_type(layer: int) -> str:
 def _encode_a1z26(word: str) -> str:
     parts = [str(ord(ch) - ord("A") + 1) for ch in word.upper() if ch.isalpha()]
     return " · ".join(parts)
+
+
+def encode_instruction_hidden(instruction: str) -> str:
+    """Hide instruction inside a long cover briefing (acrostic: first letter per sentence)."""
+    instruction = instruction.strip()
+    if not instruction:
+        return ""
+
+    openers: dict[str, list[str]] = {
+        "A": ["Archive", "Access", "Automated", "Anomaly", "Auxiliary"],
+        "B": ["Briefing", "Backup", "Baseline", "Biometric", "Boundary"],
+        "C": ["Calibration", "Cipher", "Control", "Containment", "Channel"],
+        "D": ["Diagnostic", "Deployment", "Directive", "Distributed", "Decryption"],
+        "E": ["Encrypted", "Emergency", "Every", "External", "Escalation"],
+        "F": ["Firewall", "Field", "Final", "Frequency", "Failover"],
+        "G": ["Grid", "Gateway", "Ground", "Guidance", "Generated"],
+        "H": ["Hidden", "Hostile", "Hardened", "Handler", "Handshake"],
+        "I": ["Integrity", "Internal", "Intercept", "Isolated", "Interface"],
+        "J": ["Joint", "Jammed", "Judicial", "Junction", "Justified"],
+        "K": ["Key", "Kernel", "Known", "Keystone", "Kinetic"],
+        "L": ["Latency", "Layer", "Local", "Locked", "Legacy"],
+        "M": ["Mission", "Manual", "Matrix", "Monitoring", "Modulated"],
+        "N": ["Neural", "Network", "Nominal", "Node", "Notification"],
+        "O": ["Override", "Operational", "Outbound", "Obfuscated", "Optical"],
+        "P": ["Protocol", "Primary", "Passive", "Perimeter", "Payload"],
+        "Q": ["Queued", "Quarantined", "Qualified", "Quantum", "Quiet"],
+        "R": ["Relay", "Restricted", "Routine", "Recovery", "Residual"],
+        "S": ["Search", "Security", "Standard", "Surveillance", "Subsystem"],
+        "T": ["Telemetry", "Terminal", "Threat", "Transmission", "Tactical"],
+        "U": ["Unauthorized", "Upstream", "Unified", "Urgent", "Utility"],
+        "V": ["Vector", "Verified", "Volatile", "Vault", "Vigilance"],
+        "W": ["We", "Warning", "Wireless", "Watchdog", "Workflow"],
+        "X": ["Xenon", "Xerographic", "X-linked", "Xenial", "X-factor"],
+        "Y": ["Yield", "Yesterday", "Yearly", "Yellow", "Younger"],
+        "Z": ["Zero", "Zone", "Zonal", "Zephyr", "Zeta"],
+    }
+    suffixes = [
+        "relay diagnostics reported nominal throughput across primary sectors.",
+        "override channels were recalibrated during the last security window.",
+        "grid telemetry matched expected ranges after the midnight sweep.",
+        "access logs from the previous cycle require manual verification.",
+        "perimeter sensors registered only low-grade interference overnight.",
+        "cipher rotation completed without triggering downstream alarms.",
+        "containment fields held steady through the entire observation period.",
+        "mission control acknowledged receipt of the latest status packet.",
+        "encrypted uplinks remained stable despite elevated background noise.",
+        "field teams confirmed alignment with the published protocol schedule.",
+        "surveillance sweeps identified no new anomalies in sector seven.",
+        "backup relays synchronized within acceptable tolerance margins.",
+        "neural routing tables were flushed and rebuilt from trusted sources.",
+        "threat indicators stayed below threshold for the full watch rotation.",
+        "distributed nodes passed integrity checks across all active layers.",
+    ]
+
+    def sentence_for_letter(letter: str, index: int) -> str:
+        key = letter.upper()
+        options = openers.get(key, [key])
+        opener = options[index % len(options)]
+        suffix = suffixes[index % len(suffixes)]
+        return f"{opener} {suffix}"
+
+    sentences: list[str] = []
+    trailing_punct = ""
+    letter_index = 0
+
+    for ch in instruction:
+        if ch.isalpha():
+            sentences.append(sentence_for_letter(ch, letter_index))
+            letter_index += 1
+        elif ch.isdigit():
+            clause = f", segment {ch},"
+            if sentences:
+                sentences[-1] = sentences[-1].rstrip(".") + clause
+            else:
+                sentences.append(
+                    f"Staging segment {ch} registered in the override manifest."
+                )
+        elif ch in ".,;:!?)(":
+            trailing_punct += ch
+
+    if trailing_punct and sentences:
+        sentences[-1] = sentences[-1].rstrip(".") + trailing_punct
+    elif trailing_punct:
+        return trailing_punct
+
+    return " ".join(sentences)
+
+
+def encode_instruction_cipher(text: str, layer: int) -> str:
+    if layer == 1:
+        return encode_instruction_hidden(text)
+    return ""
 
 
 def _encode_ascii(word: str) -> str:
@@ -264,10 +396,21 @@ def get_layer_encoding(layer: int) -> dict:
     }
 
 
-def get_digit_scores_by_rank() -> dict[int, int]:
+def get_digit_max_score() -> int:
     mission = _ensure_mission_config()
-    scores = mission.get("digit_scores_by_rank") or DEFAULT_DIGIT_SCORES_BY_RANK
-    return {int(k): int(v) for k, v in scores.items()}
+    return max(0, int(mission.get("digit_max_score", DEFAULT_DIGIT_MAX_SCORE)))
+
+
+def get_digit_minus_score() -> int:
+    mission = _ensure_mission_config()
+    return max(0, int(mission.get("digit_minus_score", DEFAULT_DIGIT_MINUS_SCORE)))
+
+
+def get_digit_score_for_rank(rank: int) -> int:
+    """1st correct digit in a mission: max; each later entry loses one minus-score step."""
+    if rank < 1:
+        return 0
+    return max(0, get_digit_max_score() - (rank - 1) * get_digit_minus_score())
 
 
 def get_digit_wrong_penalty() -> int:
@@ -312,6 +455,19 @@ def _ensure_layer_digit_claims() -> dict[int, dict[int, list[str]]]:
     return claims
 
 
+def _ensure_layer_digit_submission_log() -> dict[int, list[str]]:
+    if "layer_digit_submission_log" not in state:
+        state["layer_digit_submission_log"] = {lyr: [] for lyr in LAYERS}
+    log = state["layer_digit_submission_log"]
+    for lyr in LAYERS:
+        log.setdefault(lyr, [])
+    return log
+
+
+def _layer_digit_submission_count(layer: int) -> int:
+    return len(_ensure_layer_digit_submission_log().get(layer, []))
+
+
 def _layer_slot_claims(layer: int, position: int) -> list[str]:
     claims = _ensure_layer_digit_claims()
     return list(claims.get(layer, {}).get(position, []))
@@ -335,15 +491,14 @@ def get_active_layer() -> int | None:
 
 
 def _sync_layer_finish_order(layer: int) -> None:
-    """Keep finish_order in sync with digit claims for display."""
-    claims = _ensure_layer_digit_claims()
+    """Order squads by who entered a correct digit earliest in this mission."""
+    log = _ensure_layer_digit_submission_log().get(layer, [])
     squads: list[str] = []
     seen: set[str] = set()
-    for pos in sorted(claims.get(layer, {}).keys()):
-        for squad in claims[layer][pos]:
-            if squad not in seen:
-                squads.append(squad)
-                seen.add(squad)
+    for squad in log:
+        if squad not in seen:
+            squads.append(squad)
+            seen.add(squad)
     state["layer_finish_order"][layer] = squads
 
 
@@ -381,9 +536,43 @@ def get_step2_duration() -> int:
     return max(5, int(_step_config()["step2"]["duration_seconds"]))
 
 
+def _ensure_step2_config() -> dict:
+    step2 = _step_config().setdefault("step2", {})
+    step2.setdefault("team_count", ACT0_TEAM_COUNT)
+    step2.setdefault("player_count", ACT0_TEAM_COUNT * ACT0_MAX_MEMBERS)
+    step2["team_count"] = max(2, min(8, int(step2["team_count"])))
+    step2["player_count"] = max(
+        step2["team_count"],
+        min(64, int(step2["player_count"])),
+    )
+    return step2
+
+
+def get_step2_team_count() -> int:
+    return _ensure_step2_config()["team_count"]
+
+
+def get_step2_player_count() -> int:
+    return _ensure_step2_config()["player_count"]
+
+
+def get_step2_max_members() -> int:
+    teams = get_step2_team_count()
+    players = get_step2_player_count()
+    return max(1, min(ACT0_MAX_MEMBERS, -(-players // teams)))
+
+
 def _gm_config_snapshot() -> dict:
     mission = _ensure_mission_config()
+    step2 = _ensure_step2_config()
     cfg = copy.deepcopy(_step_config())
+    cfg["step2"] = {
+        "narration": step2["narration"],
+        "duration_seconds": step2["duration_seconds"],
+        "team_count": step2["team_count"],
+        "player_count": step2["player_count"],
+        "max_members_per_team": get_step2_max_members(),
+    }
     cfg["mission"] = {
         "duration_seconds": mission["duration_seconds"],
         "names": {
@@ -392,15 +581,21 @@ def _gm_config_snapshot() -> dict:
         "passphrases": {
             str(k): v for k, v in mission["passphrases"].items()
         },
-        "digit_scores_by_rank": {
-            str(k): v for k, v in get_digit_scores_by_rank().items()
-        },
+        "digit_max_score": get_digit_max_score(),
+        "digit_minus_score": get_digit_minus_score(),
         "digit_wrong_penalty": get_digit_wrong_penalty(),
+        "instructions": {
+            str(k): v for k, v in _ensure_mission_config()["instructions"].items()
+        },
         "layers": [
             {
                 "id": lyr,
                 "name": get_layer_name(lyr),
                 "passphrase": get_layer_passphrase(lyr),
+                "instruction": get_layer_instruction(lyr),
+                "instruction_cipher": encode_instruction_cipher(
+                    get_layer_instruction(lyr), lyr
+                ),
                 **get_layer_encoding(lyr),
             }
             for lyr in sorted(LAYERS)
@@ -455,6 +650,7 @@ def _default_state() -> dict:
         "squad_names": list(SQUADS),
         "layer_finish_order": {layer: [] for layer in LAYERS},
         "layer_digit_claims": {layer: {} for layer in LAYERS},
+        "layer_digit_submission_log": {layer: [] for layer in LAYERS},
         "score_event_id": 0,
         "last_score_event": {"id": 0, "type": "reward"},
         "timer": {
@@ -546,14 +742,22 @@ class Step1Config(BaseModel):
 class Step2Config(BaseModel):
     narration: str
     duration_seconds: int
+    team_count: int = ACT0_TEAM_COUNT
+    player_count: int = ACT0_TEAM_COUNT * ACT0_MAX_MEMBERS
 
 
 class MissionConfig(BaseModel):
     duration_seconds: int
     passphrases: dict[str, str]
     names: dict[str, str]
-    digit_scores_by_rank: dict[str, int] = {}
+    digit_max_score: int = DEFAULT_DIGIT_MAX_SCORE
+    digit_minus_score: int = DEFAULT_DIGIT_MINUS_SCORE
     digit_wrong_penalty: int = DEFAULT_DIGIT_WRONG_PENALTY
+    instructions: dict[str, str] = {}
+
+
+class InstructionCipherRequest(BaseModel):
+    text: str = ""
 
 
 class DigitSubmission(BaseModel):
@@ -570,10 +774,11 @@ def _parse_members_list(raw: Union[list[str], str]) -> list[str]:
 
 def _normalize_team_members(raw: Union[list[str], str]) -> str:
     parts = _parse_members_list(raw)
-    if len(parts) > ACT0_MAX_MEMBERS:
+    max_members = get_step2_max_members()
+    if len(parts) > max_members:
         raise HTTPException(
             400,
-            detail=f"Maximum {ACT0_MAX_MEMBERS} members per team.",
+            detail=f"Maximum {max_members} members per team.",
         )
     return ", ".join(parts)
 
@@ -581,7 +786,8 @@ def _normalize_team_members(raw: Union[list[str], str]) -> str:
 def _shuffle_members_into_teams(
     team_names: list[str], members_pool: list[str]
 ) -> list[dict]:
-    """Randomly distribute members across teams (max ACT0_MAX_MEMBERS each)."""
+    """Randomly distribute members across teams."""
+    max_members = get_step2_max_members()
     pool = [m for m in members_pool if m]
     random.shuffle(pool)
     buckets: list[list[str]] = [[] for _ in team_names]
@@ -589,7 +795,7 @@ def _shuffle_members_into_teams(
     for member in pool:
         placed = False
         for _ in range(len(buckets)):
-            if len(buckets[team_idx]) < ACT0_MAX_MEMBERS:
+            if len(buckets[team_idx]) < max_members:
                 buckets[team_idx].append(member)
                 team_idx = (team_idx + 1) % len(buckets)
                 placed = True
@@ -731,7 +937,6 @@ def submit_mission_digit(payload: DigitSubmission) -> dict:
 
     claims = _ensure_layer_digit_claims()
     layer_claims = claims.setdefault(layer, {})
-    scores = get_digit_scores_by_rank()
 
     chosen_pos: int | None = None
     for pos, expected in enumerate(parts):
@@ -779,15 +984,18 @@ def submit_mission_digit(payload: DigitSubmission) -> dict:
         }
 
     slot = layer_claims.setdefault(chosen_pos, [])
-    rank = len(slot) + 1
+    submission_log = _ensure_layer_digit_submission_log()
+    rank = len(submission_log.setdefault(layer, [])) + 1
+    submission_log[layer].append(squad)
     slot.append(squad)
-    points = scores.get(rank, 0)
+    points = get_digit_score_for_rank(rank)
     state["squads"][squad]["score"] += points
     event_id = _record_score_event("reward")
 
     _sync_layer_finish_order(layer)
     add_transmission(
-        f"{squad} :: M{layer} DIGIT #{chosen_pos + 1} :: +{points} pts (rank #{rank})",
+        f"{squad} :: M{layer} DIGIT #{chosen_pos + 1} :: +{points} pts "
+        f"(entry #{rank} in mission)",
         "success",
     )
     _maybe_complete_layer(layer)
@@ -807,10 +1015,24 @@ def submit_mission_digit(payload: DigitSubmission) -> dict:
     }
 
 
+def _start_mission_timer() -> bool:
+    """Start mission countdown if idle (not running and not paused)."""
+    timer = state["timer"]
+    if timer["paused_at"] is not None:
+        return False
+    if timer["started_at"] is not None:
+        return False
+    timer["started_at"] = time.time()
+    timer["paused_elapsed"] = 0.0
+    add_transmission("MISSION TIMER STARTED :: COUNTDOWN INITIATED", "info")
+    return True
+
+
 def _start_step3() -> None:
     if state["step"] >= STEP_MISSION:
         return
     state["step"] = STEP_MISSION
+    _start_mission_timer()
     add_transmission("STEP 3 :: MISSION PROTOCOL INITIATED", "danger")
     _persist()
 
@@ -847,15 +1069,19 @@ def compute_act0_remaining() -> tuple[int, bool, bool]:
 
 
 def apply_act0_teams(teams: list[dict]) -> None:
-    """Map registered Act 0 teams onto the four squad slots."""
+    """Map registered Act 0 teams onto squad slots."""
+    team_limit = get_step2_team_count()
     old_names = list(state["squad_names"])
     new_names: list[str] = []
-    for idx, team in enumerate(teams[:ACT0_TEAM_COUNT]):
-        name = team["name"].upper().strip() or old_names[idx]
+    for idx, team in enumerate(teams[:team_limit]):
+        fallback = old_names[idx] if idx < len(old_names) else f"TEAM {idx + 1}"
+        name = team["name"].upper().strip() or fallback
         new_names.append(name)
 
-    while len(new_names) < ACT0_TEAM_COUNT:
-        new_names.append(old_names[len(new_names)])
+    while len(new_names) < team_limit:
+        idx = len(new_names)
+        fallback = old_names[idx] if idx < len(old_names) else f"TEAM {idx + 1}"
+        new_names.append(fallback)
 
     for old, new in zip(old_names, new_names):
         if old == new:
@@ -875,9 +1101,15 @@ def apply_act0_teams(teams: list[dict]) -> None:
             state["winner"] = new
 
     state["squad_names"] = new_names
+    for name in new_names:
+        if name not in state["squads"]:
+            state["squads"][name] = _fresh_squad_state()
+    for name in list(state["squads"]):
+        if name not in new_names:
+            del state["squads"][name]
     if "team_members" not in state:
         state["team_members"] = {}
-    for idx, team in enumerate(teams[:ACT0_TEAM_COUNT]):
+    for idx, team in enumerate(teams[:team_limit]):
         key = new_names[idx]
         state["team_members"][key] = team["members"]
 
@@ -1051,6 +1283,7 @@ async def get_state():
                 "id": lyr,
                 "name": get_layer_name(lyr),
                 "letters": len(get_layer_passphrase(lyr)),
+                "instruction": get_layer_instruction(lyr),
                 "digits_total": len(get_layer_digit_parts(lyr)),
                 "digits_found": sum(
                     1
@@ -1085,6 +1318,8 @@ async def get_state():
             "remaining_seconds": remaining,
             "running": running,
             "started": started,
+            "paused": state["timer"]["paused_at"] is not None,
+            "duration_seconds": state["timer"]["duration_seconds"],
         },
         "game_over": state["game_over"],
         "winner": state["winner"],
@@ -1093,6 +1328,7 @@ async def get_state():
             "complete": act0["complete"],
             "timed_out": act0.get("timed_out", False),
             "shuffled": act0.get("shuffled", False),
+            "duration_seconds": act0["duration_seconds"],
             "remaining_seconds": act0_remaining,
             "running": act0_running,
             "started": act0_started,
@@ -1100,8 +1336,9 @@ async def get_state():
             "narration": get_step2_narration(),
             "narration_id": act0["narration_id"],
             "shuffle_narration_id": act0.get("shuffle_narration_id", 0),
-            "team_count": ACT0_TEAM_COUNT,
-            "max_members": ACT0_MAX_MEMBERS,
+            "team_count": get_step2_team_count(),
+            "max_members": get_step2_max_members(),
+            "player_count": get_step2_player_count(),
         },
     }
 
@@ -1149,10 +1386,10 @@ async def act0_register(payload: Act0Submission):
     if act0["complete"]:
         raise HTTPException(409, detail="Act 0 team registration is closed.")
 
-    if len(payload.teams) != ACT0_TEAM_COUNT:
+    if len(payload.teams) != get_step2_team_count():
         raise HTTPException(
             400,
-            detail=f"Exactly {ACT0_TEAM_COUNT} teams are required.",
+            detail=f"Exactly {get_step2_team_count()} teams are required.",
         )
 
     timed_out = act0.get("timed_out", False)
@@ -1280,11 +1517,8 @@ async def gm_act0_complete():
 
 @app.post("/gm/timer/start")
 async def gm_timer_start():
-    state["timer"]["started_at"] = time.time()
-    state["timer"]["paused_at"] = None
-    state["timer"]["paused_elapsed"] = 0.0
-    add_transmission("MISSION TIMER STARTED :: COUNTDOWN INITIATED", "info")
-    _persist()
+    if _start_mission_timer():
+        _persist()
     return {"status": "started"}
 
 
@@ -1297,7 +1531,8 @@ async def gm_timer_pause():
         timer["started_at"] = None
         add_transmission("MISSION TIMER PAUSED", "warn")
     _persist()
-    return {"status": "paused"}
+    remaining, _, _ = compute_timer_remaining()
+    return {"status": "paused", "remaining_seconds": remaining}
 
 
 @app.post("/gm/timer/resume")
@@ -1308,7 +1543,8 @@ async def gm_timer_resume():
         timer["paused_at"] = None
         add_transmission("MISSION TIMER RESUMED", "info")
     _persist()
-    return {"status": "resumed"}
+    remaining, running, _ = compute_timer_remaining()
+    return {"status": "resumed", "remaining_seconds": remaining, "running": running}
 
 
 @app.post("/gm/timer/reset")
@@ -1374,17 +1610,13 @@ async def gm_config_mission(cfg: MissionConfig):
             )
         mission["passphrases"][lyr] = phrase
 
-    if cfg.digit_scores_by_rank:
-        scores: dict[int, int] = {}
-        for rank in range(1, MAX_DIGIT_CLAIMS_PER_SLOT + 1):
-            key = str(rank)
-            if key not in cfg.digit_scores_by_rank:
-                raise HTTPException(
-                    400, detail=f"Score for rank #{rank} is required."
-                )
-            scores[rank] = int(cfg.digit_scores_by_rank[key])
-        mission["digit_scores_by_rank"] = scores
+    mission["instructions"] = {
+        lyr: cfg.instructions.get(str(lyr), "").strip()
+        for lyr in sorted(LAYERS)
+    }
 
+    mission["digit_max_score"] = max(0, int(cfg.digit_max_score))
+    mission["digit_minus_score"] = max(0, int(cfg.digit_minus_score))
     mission["digit_wrong_penalty"] = max(0, int(cfg.digit_wrong_penalty))
 
     timer = state["timer"]
@@ -1405,10 +1637,15 @@ async def gm_config_mission(cfg: MissionConfig):
         "duration_seconds": duration,
         "names": {str(k): v for k, v in mission["names"].items()},
         "passphrases": {str(k): v for k, v in mission["passphrases"].items()},
-        "digit_scores_by_rank": {
-            str(k): v for k, v in get_digit_scores_by_rank().items()
-        },
+        "digit_max_score": get_digit_max_score(),
+        "digit_minus_score": get_digit_minus_score(),
         "digit_wrong_penalty": get_digit_wrong_penalty(),
+        "instructions": {
+            str(k): v for k, v in mission["instructions"].items()
+        },
+        "instruction_cipher": encode_instruction_cipher(
+            get_layer_instruction(1), 1
+        ),
         "encodings": encodings,
     }
 
@@ -1431,20 +1668,30 @@ async def gm_config_step2(cfg: Step2Config):
     if not text:
         raise HTTPException(400, detail="Step 2 narration is required.")
     duration = max(5, int(cfg.duration_seconds))
-    _step_config()["step2"]["narration"] = text
-    _step_config()["step2"]["duration_seconds"] = duration
+    team_count = max(2, min(8, int(cfg.team_count)))
+    player_count = max(team_count, min(64, int(cfg.player_count)))
+    step2 = _ensure_step2_config()
+    step2["narration"] = text
+    step2["duration_seconds"] = duration
+    step2["team_count"] = team_count
+    step2["player_count"] = player_count
     _invalidate_tts_step("step2")
     act0 = state["act0"]
     if not act0["active"] and act0["started_at"] is None:
         act0["duration_seconds"] = duration
     add_transmission(
-        f"GM :: STEP 2 CONFIG UPDATED :: {duration}s timer", "info"
+        f"GM :: STEP 2 CONFIG UPDATED :: {duration}s · "
+        f"{player_count} players · {team_count} teams",
+        "info",
     )
     _persist()
     return {
         "status": "ok",
         "narration": text,
         "duration_seconds": duration,
+        "team_count": team_count,
+        "player_count": player_count,
+        "max_members_per_team": get_step2_max_members(),
     }
 
 
@@ -1472,6 +1719,7 @@ async def gm_reset_act():
     for lyr in LAYERS:
         state["layer_finish_order"][lyr] = []
     state["layer_digit_claims"] = {lyr: {} for lyr in LAYERS}
+    state["layer_digit_submission_log"] = {lyr: [] for lyr in LAYERS}
     state["score_event_id"] = 0
     state["last_score_event"] = {"id": 0, "type": "reward"}
     state["game_over"] = False
@@ -1522,6 +1770,7 @@ async def gm_reset():
     for lyr in LAYERS:
         state["layer_finish_order"][lyr] = []
     state["layer_digit_claims"] = {lyr: {} for lyr in LAYERS}
+    state["layer_digit_submission_log"] = {lyr: [] for lyr in LAYERS}
     state["score_event_id"] = 0
     state["last_score_event"] = {"id": 0, "type": "reward"}
     state["transmissions"] = []
@@ -1541,6 +1790,20 @@ async def gm_reset():
     add_transmission("GAME REBOOT :: TEAMS & SCORES CLEARED", "info")
     _persist()
     return {"status": "reboot", "step": STEP_IDLE}
+
+
+@app.post("/gm/mission/1/instruction-cipher")
+async def gm_m1_instruction_cipher_post(body: InstructionCipherRequest):
+    """Build Mission 1 cover text with the instruction hidden inside."""
+    source = body.text.strip() or get_layer_instruction(1)
+    return {"cipher": encode_instruction_cipher(source, 1)}
+
+
+@app.get("/gm/mission/1/instruction-cipher")
+async def gm_m1_instruction_cipher(text: str = ""):
+    """Build Mission 1 cover text with the instruction hidden inside."""
+    source = text.strip() or get_layer_instruction(1)
+    return {"cipher": encode_instruction_cipher(source, 1)}
 
 
 @app.get("/gm/state")
@@ -1564,6 +1827,8 @@ async def gm_state():
                 "score_log": _squad_score_log(squad_key),
             }
         )
+    remaining, running, started = compute_timer_remaining()
+    timer = state["timer"]
     return {
         "step": state["step"],
         "step_label": _step_label(state["step"]),
@@ -1574,6 +1839,13 @@ async def gm_state():
         "game_over": state["game_over"],
         "winner": state["winner"],
         "transmissions": state["transmissions"][:10],
+        "timer": {
+            "remaining_seconds": remaining,
+            "running": running,
+            "started": started,
+            "paused": timer["paused_at"] is not None,
+            "duration_seconds": timer["duration_seconds"],
+        },
     }
 
 

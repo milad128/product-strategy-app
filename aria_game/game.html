@@ -528,11 +528,17 @@
   .phrase-line {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     gap: 16px;
     min-height: 52px;
     padding: 6px 4px;
+  }
+  .phrase-mission-group {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
   }
   .phrase-word {
     display: inline-flex;
@@ -560,6 +566,32 @@
     box-shadow: var(--glow-cyan);
     border-radius: var(--radius-xs);
     animation: slotReveal 0.45s ease;
+  }
+  .phrase-word.revealed.cleared {
+    min-width: calc(var(--slots, 4) * 13px + 28px);
+  }
+  .phrase-digits-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .phrase-digit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 4px 8px;
+    border: 1px solid var(--cyan);
+    border-radius: var(--radius-xs);
+    background: rgba(3, 7, 18, 0.65);
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 0;
   }
   @keyframes slotReveal {
     from { transform: scale(0.85); opacity: 0.3; }
@@ -638,9 +670,12 @@
     font-weight: 400;
     letter-spacing: 0;
     color: var(--text-muted);
-    line-height: 1.45;
+    line-height: 1.4;
     margin-top: 5px;
-    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 280px;
   }
   .lb-score {
     text-align: right;
@@ -1288,9 +1323,17 @@ function renderStep1(state) {
 
 const MAX_MEMBERS_PER_SQUAD = 6;
 
+let lastStep2TeamCount = 0;
+let lastStep2MaxMembers = 0;
+
 function buildStep2Form(teamCount, maxMembers) {
-  if (step2FormBuilt) return;
   const slots = maxMembers || MAX_MEMBERS_PER_SQUAD;
+  if (step2FormBuilt && teamCount === lastStep2TeamCount && slots === lastStep2MaxMembers) {
+    return;
+  }
+  lastStep2TeamCount = teamCount;
+  lastStep2MaxMembers = slots;
+  step2FormBuilt = true;
   document.getElementById('s2Form').innerHTML = Array.from({length: teamCount}).map((_, i) => `
     <div class="s2-team">
       <div class="s2-team-label">Squad ${i + 1}</div>
@@ -1311,7 +1354,14 @@ function buildStep2Form(teamCount, maxMembers) {
       </div>
     </div>
   `).join('');
-  step2FormBuilt = true;
+}
+
+function step2HintText(act0) {
+  const teams = act0.team_count || 4;
+  const maxMembers = act0.max_members || MAX_MEMBERS_PER_SQUAD;
+  const players = act0.player_count || teams * maxMembers;
+  return `Enter all ${teams} team names and up to ${maxMembers} members each `
+    + `(${players} players), then register before time runs out.`;
 }
 
 function renderStep2(state) {
@@ -1355,11 +1405,15 @@ function renderStep2(state) {
     root.classList.add('s2-active');
     document.getElementById('s2Done').classList.remove('show');
     buildStep2Form(act0.team_count || 4, act0.max_members || MAX_MEMBERS_PER_SQUAD);
-
-    clock.textContent = fmtShort(act0.remaining_seconds);
+    const displaySeconds = act0.running || act0.timed_out
+      ? act0.remaining_seconds
+      : (act0.duration_seconds ?? act0.remaining_seconds ?? 60);
+    clock.textContent = fmtShort(displaySeconds);
     timer.classList.remove('warn', 'danger');
-    if (act0.remaining_seconds <= 10) timer.classList.add('danger');
-    else if (act0.remaining_seconds <= 30) timer.classList.add('warn');
+    if (act0.running || act0.timed_out) {
+      if (act0.remaining_seconds <= 10) timer.classList.add('danger');
+      else if (act0.remaining_seconds <= 30) timer.classList.add('warn');
+    }
 
     if (act0.timed_out) {
       if (!step2TimeoutPlayed) {
@@ -1371,14 +1425,14 @@ function renderStep2(state) {
       statusEl.textContent = 'TIME EXPIRED';
       statusEl.className = 's2-status err';
       hintEl.textContent =
-        'Time expired. Enter all team names — members will be shuffled across squads (max 6 per team).';
+        `Time expired. Enter all team names — members will be shuffled across `
+        + `${act0.team_count || 4} squads (max ${act0.max_members || MAX_MEMBERS_PER_SQUAD} per team).`;
     } else {
       submitBtn.textContent = 'Register teams';
       submitBtn.disabled = !act0.active;
       statusEl.textContent = '';
       statusEl.className = 's2-status';
-      hintEl.textContent =
-        'Enter all 4 team names and up to 6 members each, then register before time runs out.';
+      hintEl.textContent = step2HintText(act0);
 
       if (act0.narration_id && act0.narration_id !== lastStep2NarrationId) {
         lastStep2NarrationId = act0.narration_id;
@@ -1467,11 +1521,26 @@ document.getElementById('s2ContinueBtn').addEventListener('click', async () => {
 
 function renderPhraseLine(layers) {
   return layers.map(layer => {
-    const word = (layer.revealed_word || '').toUpperCase();
-    if (word) {
-      return `<span class="phrase-word revealed">${escapeHtml(word)}</span>`;
+    const slots = layer.digit_slots || [];
+    const slotCount = layer.letters || slots.length || 4;
+    const title = escapeHtml(layer.name || `M${layer.id}`);
+    if (layer.cleared && slots.length) {
+      return `
+        <div class="phrase-mission-group" title="${title}">
+          <span class="phrase-word revealed cleared" style="--slots:${slotCount}"></span>
+          <div class="phrase-digits-row">
+            ${slots.map(slot => `
+              <span class="phrase-digit">${slot.value ? escapeHtml(slot.value) : '?'}</span>
+            `).join('')}
+          </div>
+        </div>
+      `;
     }
-    return `<span class="phrase-word empty" style="--slots:${layer.letters || 4}"></span>`;
+    return `
+      <div class="phrase-mission-group" title="${title}">
+        <span class="phrase-word empty" style="--slots:${slotCount}"></span>
+      </div>
+    `;
   }).join('');
 }
 
@@ -1614,14 +1683,23 @@ function renderMissionBoard(layers, state) {
   syncDigitSquadOptions(state);
 }
 
-function formatSquadMembers(members) {
-  if (!members) return '';
-  return String(members)
+function getSquadMembers(squad, state) {
+  if (squad.members) return squad.members;
+  const teams = state?.act0?.teams || [];
+  const match = teams.find(
+    t => String(t.name || '').toUpperCase() === String(squad.name || '').toUpperCase()
+  );
+  return match?.members || '';
+}
+
+function renderSquadMembers(squad, state) {
+  const raw = getSquadMembers(squad, state);
+  const list = String(raw)
     .split(',')
     .map(m => m.trim())
-    .filter(Boolean)
-    .map(m => escapeHtml(m))
-    .join(' · ');
+    .filter(Boolean);
+  if (!list.length) return '';
+  return `<div class="lb-members">${list.map(m => escapeHtml(m)).join(' · ')}</div>`;
 }
 
 function renderMission(state) {
@@ -1660,20 +1738,17 @@ function renderMission(state) {
         </tr>
       </thead>
       <tbody>
-        ${squads.map((s, i) => {
-          const memberLine = formatSquadMembers(s.members);
-          return `
+        ${squads.map((s, i) => `
           <tr>
             <td class="lb-rank ${i === 0 ? 'gold' : ''}">${i + 1}</td>
             <td class="lb-name">
               <div>${escapeHtml(s.name)}</div>
-              ${memberLine ? `<div class="lb-members">${memberLine}</div>` : ''}
+              ${renderSquadMembers(s, state)}
             </td>
             <td class="lb-progress">${squadLayersCleared(s, layers)}/5</td>
             <td class="lb-score">${s.score}</td>
           </tr>
-        `;
-        }).join('')}
+        `).join('')}
       </tbody>
     </table>
   `;
@@ -1753,6 +1828,8 @@ function render(state) {
     lastStep2NarrationId = 0;
     lastStep2ShuffleNarrationId = 0;
     step2FormBuilt = false;
+    lastStep2TeamCount = 0;
+    lastStep2MaxMembers = 0;
     step2TimeoutPlayed = false;
     document.getElementById('acceptBtn')?.classList.remove('show');
     document.getElementById('startBtn').disabled = false;

@@ -36,8 +36,22 @@ def _normalize_state(state: dict) -> dict:
         mission["passphrases"] = _int_key_dict(mission["passphrases"])
     if mission and "names" in mission:
         mission["names"] = _int_key_dict(mission["names"])
-    if mission and "digit_scores_by_rank" in mission:
-        mission["digit_scores_by_rank"] = _int_key_dict(mission["digit_scores_by_rank"])
+    if mission and "digit_max_score" not in mission and mission.get("digit_scores_by_rank"):
+        old = mission["digit_scores_by_rank"]
+        if isinstance(old, dict):
+            old = _int_key_dict(old)
+            r1 = int(old.get(1, 100))
+            r2 = int(old.get(2, max(0, r1 - 20)))
+            mission["digit_max_score"] = r1
+            mission["digit_minus_score"] = max(0, r1 - r2)
+    if mission:
+        mission.setdefault("digit_max_score", 100)
+        mission.setdefault("digit_minus_score", 20)
+        mission.setdefault("instructions", {})
+        if mission.get("instructions"):
+            mission["instructions"] = _int_key_dict(mission["instructions"])
+        for lyr in range(1, 6):
+            mission["instructions"].setdefault(lyr, "")
     if "layer_digit_claims" in state:
         state["layer_digit_claims"] = _int_key_dict(state["layer_digit_claims"])
         for lyr, layer_claims in state["layer_digit_claims"].items():
@@ -46,6 +60,11 @@ def _normalize_state(state: dict) -> dict:
     state.setdefault("layer_digit_claims", {lyr: {} for lyr in range(1, 6)})
     state.setdefault("score_event_id", 0)
     state.setdefault("last_score_event", {"id": 0, "type": "reward"})
+    state.setdefault("layer_digit_submission_log", {lyr: [] for lyr in range(1, 6)})
+    if "layer_digit_submission_log" in state:
+        state["layer_digit_submission_log"] = {
+            int(k): list(v) for k, v in state["layer_digit_submission_log"].items()
+        }
     return state
 
 
