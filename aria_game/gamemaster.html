@@ -138,13 +138,78 @@
   }
   .btn-resume:hover:not(:disabled) { background: rgba(16, 185, 129, 0.22); }
   .timer-controls[hidden] { display: none; }
+  .timer-controls {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+  }
   .timer-status {
     font-family: var(--mono);
     font-size: 11px;
     color: var(--text-muted);
     letter-spacing: 0.08em;
-    margin: -4px 0 12px;
+    margin: 0 0 12px;
     text-align: center;
+    line-height: 1.45;
+  }
+  .timer-add-block {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+  }
+  .timer-add-block label {
+    display: block;
+    font-family: var(--sans);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .timer-add-block input[type="number"] {
+    width: 100%;
+    background: rgba(3, 7, 18, 0.6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 600;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+  .timer-add-block input[type="number"]::-webkit-inner-spin-button,
+  .timer-add-block input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+  }
+  .timer-add-block input[type="number"]:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px var(--cyan-soft);
+  }
+  .btn-add-time {
+    display: block;
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    margin-bottom: 0;
+    transition: all 0.25s;
+    color: var(--cyan);
+    background: rgba(0, 229, 255, 0.1);
+  }
+  .btn-add-time:hover:not(:disabled) {
+    background: rgba(0, 229, 255, 0.2);
+    box-shadow: var(--glow-cyan);
   }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn-hint {
@@ -490,6 +555,12 @@
         <button type="button" class="btn btn-pause" id="btnPauseGame">PAUSE GAME</button>
         <button type="button" class="btn btn-resume" id="btnResumeGame" hidden>RESUME GAME</button>
         <p class="btn-hint">Pause saves the remaining time. Resume continues from that value.</p>
+        <div class="timer-add-block">
+          <label for="cfgTimerAddMin">Extend mission timer (minutes)</label>
+          <input type="number" id="cfgTimerAddMin" min="5" max="120" value="15" />
+          <button type="button" class="btn-add-time" id="btnAddTime">ADD TIME</button>
+          <p class="btn-hint" style="margin-top:10px;margin-bottom:0">Adds minutes when the countdown is running low.</p>
+        </div>
       </div>
 
       <div class="msg" id="actionMsg"></div>
@@ -1113,6 +1184,21 @@ document.getElementById('btnPauseGame').addEventListener('click', async () => {
   try {
     const data = await post('/gm/timer/pause');
     setMsg(`Game paused — ${fmtTimer(data.remaining_seconds)} saved.`, true);
+  } catch (e) {
+    setMsg(e.message, false);
+  } finally {
+    btn.disabled = false;
+    refresh();
+  }
+});
+
+document.getElementById('btnAddTime').addEventListener('click', async () => {
+  const btn = document.getElementById('btnAddTime');
+  const mins = parseInt(document.getElementById('cfgTimerAddMin').value, 10) || 15;
+  btn.disabled = true;
+  try {
+    const data = await postJson('/gm/timer/add', { seconds: mins * 60 });
+    setMsg(`+${mins} min added — ${fmtTimer(data.remaining_seconds)} on the clock.`, true);
   } catch (e) {
     setMsg(e.message, false);
   } finally {

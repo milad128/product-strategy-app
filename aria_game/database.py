@@ -60,11 +60,27 @@ def _normalize_state(state: dict) -> dict:
     state.setdefault("layer_digit_claims", {lyr: {} for lyr in range(1, 6)})
     state.setdefault("score_event_id", 0)
     state.setdefault("last_score_event", {"id": 0, "type": "reward"})
+    state.setdefault("layer_passphrase_revealed", {lyr: None for lyr in range(1, 6)})
+    state.setdefault("layer_passphrase_post_order", {lyr: [] for lyr in range(1, 6)})
+    state.setdefault("passphrase_reveal_event_id", 0)
+    state.setdefault("last_passphrase_reveal", {"id": 0, "layer": 0, "squad": ""})
+    if "layer_passphrase_revealed" in state:
+        state["layer_passphrase_revealed"] = {
+            int(k): v for k, v in state["layer_passphrase_revealed"].items()
+        }
+    if "layer_passphrase_post_order" in state:
+        state["layer_passphrase_post_order"] = {
+            int(k): list(v) for k, v in state["layer_passphrase_post_order"].items()
+        }
     state.setdefault("layer_digit_submission_log", {lyr: [] for lyr in range(1, 6)})
     if "layer_digit_submission_log" in state:
         state["layer_digit_submission_log"] = {
             int(k): list(v) for k, v in state["layer_digit_submission_log"].items()
         }
+    finale = state.get("step_config", {}).get("finale")
+    if finale is not None:
+        finale.setdefault("mapping_clue", "")
+        finale.setdefault("postman_clue", "")
     return state
 
 

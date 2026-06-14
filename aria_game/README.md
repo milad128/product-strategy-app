@@ -49,19 +49,21 @@ Make sure everyone is on the **same Wi-Fi network** as the GM laptop.
 These are what squads must DISCOVER via in-game clues. Each act gives them
 the URL path AND the passphrase to put in the body.
 
-| Layer | Act name | Hidden route | Passphrase |
+| Layer | Mission name | POST route | Passphrase |
 |---|---|---|---|
-| 1 | Garden Firewall | `POST /api/firewall/breach` | `HUMANS` |
-| 2 | Living Room Protocol | `POST /api/protocol/inject` | `SHIP` |
-| 3 | Basement Server | `POST /api/server/override` | `BETTER` |
-| 4 | Vibe-Code Sprint | `POST /api/sprint/deploy` | `TOGETHER` |
-| 5 | Final Shutdown | `POST /api/shutdown/execute` | `ALWAYS` |
+| 1 | Hide and Seek | `POST /api/mission/hide-and-seek` | `HUMANS` |
+| 2 | Stress is a Mental State | `POST /api/mission/stress-is-a-mental-state` | `SHIP` |
+| 3 | Knowledge is Power | `POST /api/mission/knowledge-is-power` | `BETTER` |
+| 4 | We Hear Each Other | `POST /api/mission/we-hear-each-other` | `TOGETHER` |
+| 5 | Live the Life | `POST /api/mission/live-the-life` | `ALWAYS` |
+
+Routes are built from **mission names** in GM config: lowercase, spaces → hyphens.
+Example: `WE HEAR EACH OTHER` → `/api/mission/we-hear-each-other`
 
 **Lockbox combination** = letter-count of each passphrase, in order:
 `6 - 4 - 6 - 8 - 6`.
 
-To change passphrases or routes: edit the `LAYERS` dict at the top of
-`server.py` and restart the server.
+To change passphrases or mission names: use the Game Master config (routes update automatically).
 
 You can also pull the full cheat sheet live:
 
@@ -85,13 +87,13 @@ The squad value must be one of: `VIPER`, `FALCON`, `GHOST`, `CIPHER`.
 
 ```bash
 # correct
-curl -X POST http://192.168.1.42:8765/api/firewall/breach \
+curl -X POST http://192.168.1.42:8765/api/mission/hide-and-seek \
   -H 'Content-Type: application/json' \
   -d '{"squad":"VIPER","passphrase":"HUMANS"}'
 # → {"status":"accepted","aria":"Acknowledged. Layer 1 breached by VIPER. Rank #1. +3 points.","rank":1,"points":3}
 
 # wrong passphrase
-curl -X POST http://192.168.1.42:8765/api/firewall/breach \
+curl -X POST http://192.168.1.42:8765/api/mission/hide-and-seek \
   -H 'Content-Type: application/json' \
   -d '{"squad":"VIPER","passphrase":"WRONG"}'
 # → {"status":"denied","aria":"Incorrect. ARIA does not yield..."} (HTTP 403)

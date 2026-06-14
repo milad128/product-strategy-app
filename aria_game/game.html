@@ -525,6 +525,50 @@
   .phrase-card {
     flex-shrink: 0;
   }
+  .finale-clues {
+    flex-shrink: 0;
+    margin-bottom: 14px;
+    border-color: rgba(251, 191, 36, 0.35);
+  }
+  .finale-clues .mission-card-head {
+    color: var(--amber);
+  }
+  .finale-clue-block {
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .finale-clue-block:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .finale-clue-label {
+    display: block;
+    font-family: var(--sans);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 8px;
+  }
+  .finale-clue-block p {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+  .finale-clue-block code {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--cyan);
+    word-break: break-all;
+  }
+  .phrase-word.revealed.word-reveal {
+    animation: slotReveal 0.6s ease, wordGlow 1.2s ease 0.3s;
+  }
+  @keyframes wordGlow {
+    0%, 100% { box-shadow: var(--glow-cyan); }
+    50% { box-shadow: 0 0 28px rgba(0, 229, 255, 0.55); }
+  }
   .phrase-line {
     display: flex;
     flex-wrap: wrap;
@@ -958,6 +1002,23 @@
     </div>
   </div>
 
+  <section class="mission-card finale-clues" id="finaleClues" hidden>
+    <div class="mission-card-head">ARIA OVERRIDE — DECODE &amp; SUBMIT</div>
+    <div class="mission-card-body">
+      <div class="finale-clue-block">
+        <span class="finale-clue-label">Decipher the phrase</span>
+        <p id="finaleMappingClue"></p>
+      </div>
+      <div class="finale-clue-block">
+        <span class="finale-clue-label">Defeat ARIA (Postman / API)</span>
+        <p id="finalePostmanClue"></p>
+        <p style="margin-top:10px;font-size:11px;color:var(--text-muted)">
+          Server: <code id="finaleApiHost"></code>
+        </p>
+      </div>
+    </div>
+  </section>
+
   <section class="mission-card phrase-card">
     <div class="mission-card-head">PROTOCOL PHRASE</div>
     <div class="mission-card-body">
@@ -994,6 +1055,7 @@
 <script>
 const API = '';
 const POLL_MS = 1000;
+const POLL_MS_FINALE = 10000;
 
 const STEPS = { IDLE: 0, INTRO: 1, TEAM_BUILD: 2, MISSION: 3 };
 
@@ -1002,6 +1064,7 @@ let lastStep1NarrationId = 0;
 let lastStep2NarrationId = 0;
 let lastStep2ShuffleNarrationId = 0;
 let lastScoreEventId = 0;
+let lastPassphraseRevealEventId = 0;
 let lastSquadNamesKey = '';
 let step2FormBuilt = false;
 let step2TimeoutPlayed = false;
@@ -1524,21 +1587,23 @@ function renderPhraseLine(layers) {
     const slots = layer.digit_slots || [];
     const slotCount = layer.letters || slots.length || 4;
     const title = escapeHtml(layer.name || `M${layer.id}`);
-    if (layer.cleared && slots.length) {
-      return `
-        <div class="phrase-mission-group" title="${title}">
-          <span class="phrase-word revealed cleared" style="--slots:${slotCount}"></span>
-          <div class="phrase-digits-row">
+    const wordRevealed = layer.passphrase_revealed && layer.revealed_word;
+    const wordHtml = wordRevealed
+      ? `<span class="phrase-word revealed word-reveal">${escapeHtml(layer.revealed_word)}</span>`
+      : layer.cleared
+        ? `<span class="phrase-word revealed cleared" style="--slots:${slotCount}"></span>`
+        : `<span class="phrase-word empty" style="--slots:${slotCount}"></span>`;
+    const digitsHtml = layer.cleared && slots.length
+      ? `<div class="phrase-digits-row">
             ${slots.map(slot => `
               <span class="phrase-digit">${slot.value ? escapeHtml(slot.value) : '?'}</span>
             `).join('')}
-          </div>
-        </div>
-      `;
-    }
+          </div>`
+      : '';
     return `
       <div class="phrase-mission-group" title="${title}">
-        <span class="phrase-word empty" style="--slots:${slotCount}"></span>
+        ${wordHtml}
+        ${digitsHtml}
       </div>
     `;
   }).join('');
@@ -1702,6 +1767,21 @@ function renderSquadMembers(squad, state) {
   return `<div class="lb-members">${list.map(m => escapeHtml(m)).join(' · ')}</div>`;
 }
 
+function renderFinaleClues(state) {
+  const panel = document.getElementById('finaleClues');
+  if (!panel) return;
+  const show = Boolean(state.finale_phase);
+  panel.hidden = !show;
+  if (!show) return;
+  const finale = state.finale || {};
+  const mappingEl = document.getElementById('finaleMappingClue');
+  const postmanEl = document.getElementById('finalePostmanClue');
+  const hostEl = document.getElementById('finaleApiHost');
+  if (mappingEl) mappingEl.textContent = finale.mapping_clue || '';
+  if (postmanEl) postmanEl.textContent = finale.postman_clue || '';
+  if (hostEl) hostEl.textContent = window.location.origin || '';
+}
+
 function renderMission(state) {
   const timer = state.timer || {};
   document.getElementById('missionClock').textContent =
@@ -1722,6 +1802,13 @@ function renderMission(state) {
     else playSuccessSound();
   }
   lastScoreEventId = state.last_score_event?.id || state.score_event_id || 0;
+
+  if ((state.passphrase_reveal_event_id || 0) > lastPassphraseRevealEventId) {
+    playSuccessSound();
+    lastPassphraseRevealEventId = state.passphrase_reveal_event_id;
+  }
+
+  renderFinaleClues(state);
 
   const layers = state.layers || [];
   document.getElementById('phrasePuzzle').innerHTML = renderPhraseLine(layers);
@@ -1842,6 +1929,11 @@ function render(state) {
   if (step >= STEPS.MISSION) renderMission(state);
 }
 
+function getPollInterval(state) {
+  if (state?.finale_phase) return POLL_MS_FINALE;
+  return POLL_MS;
+}
+
 async function poll() {
   try {
     const res = await fetch(`${API}/state`, { cache: 'no-store' });
@@ -1850,7 +1942,7 @@ async function poll() {
     render(next);
     lastState = next;
   } catch (_) {}
-  setTimeout(poll, POLL_MS);
+  setTimeout(poll, getPollInterval(lastState));
 }
 
 poll();
