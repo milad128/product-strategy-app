@@ -61,13 +61,19 @@ def _normalize_state(state: dict) -> dict:
     state.setdefault("score_event_id", 0)
     state.setdefault("last_score_event", {"id": 0, "type": "reward"})
     state.setdefault("layer_passphrase_revealed", {lyr: None for lyr in range(1, 6)})
-    state.setdefault("layer_passphrase_post_order", {lyr: [] for lyr in range(1, 6)})
-    state.setdefault("passphrase_reveal_event_id", 0)
-    state.setdefault("last_passphrase_reveal", {"id": 0, "layer": 0, "squad": ""})
+    state.setdefault("layer_passphrase_revealed_by", {lyr: None for lyr in range(1, 6)})
     if "layer_passphrase_revealed" in state:
         state["layer_passphrase_revealed"] = {
             int(k): v for k, v in state["layer_passphrase_revealed"].items()
         }
+    if "layer_passphrase_revealed_by" in state:
+        state["layer_passphrase_revealed_by"] = {
+            int(k): v for k, v in state["layer_passphrase_revealed_by"].items()
+        }
+    state.setdefault("layer_passphrase_post_order", {lyr: [] for lyr in range(1, 6)})
+    state.setdefault("passphrase_reveal_event_id", 0)
+    state.setdefault("game_over_event_id", 0)
+    state.setdefault("last_passphrase_reveal", {"id": 0, "layer": 0, "squad": ""})
     if "layer_passphrase_post_order" in state:
         state["layer_passphrase_post_order"] = {
             int(k): list(v) for k, v in state["layer_passphrase_post_order"].items()

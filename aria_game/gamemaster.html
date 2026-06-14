@@ -1119,10 +1119,17 @@ document.getElementById('btnStart').addEventListener('click', async () => {
 });
 
 document.getElementById('btnResetAct').addEventListener('click', async () => {
-  if (!confirm('Reset act progress? Scores cleared. Current step restarts. Teams are kept.')) return;
+  if (!confirm(
+    'Reset act progress? Scores cleared. On Step 3, all missions restart and the timer begins again. Teams are kept.'
+  )) return;
   try {
     const data = await post('/gm/reset-act');
-    setMsg(`Act reset — ${data.step !== undefined ? 'step ' + data.step : 'done'}.`, true);
+    setMsg(
+      (data.step ?? 0) >= 3
+        ? 'Mission reset — progress cleared, timer restarted.'
+        : `Act reset — step ${data.step ?? 'done'}.`,
+      true
+    );
   } catch (e) {
     setMsg(e.message, false);
   }
