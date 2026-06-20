@@ -6,62 +6,66 @@
   <title>BNPL Lifecycle — Data gathering</title>
   {% include 'includes/head-assets.html' %}
 </head>
-<body>
-  {% include 'includes/topbar.html' %}
+<body class="app-shell">
+  {% include 'includes/sidebar.html' %}
 
-  <main class="main main--wide">
-    <div class="admin-card">
-      <h2>Stage user counts</h2>
-      <p>
-        Enter the number of users in each stage. Percentages on the lifecycle page are calculated
-        relative to <strong>Applicant User</strong> (100% baseline). Custom stages you add on the
-        lifecycle canvas appear under <strong>Custom stages</strong>.
-      </p>
+  <div class="app-main">
+    {% include 'includes/content-header.html' %}
 
-      <form class="admin-form" id="admin-form">
-        <div id="form-fields"></div>
+    <main class="main main--wide">
+      <div class="admin-card">
+        <h2>Stage user counts</h2>
+        <p>
+          Enter the number of users in each stage. Percentages on the lifecycle page are calculated
+          relative to <strong>Applicant User</strong> (100% baseline). Custom stages you add on the
+          lifecycle canvas appear under <strong>Custom stages</strong>.
+        </p>
 
-        <div class="actions">
-          <button type="submit" class="btn btn-primary">Save &amp; update lifecycle</button>
-          <button type="button" class="btn btn-secondary" id="reset-btn">Reset to defaults</button>
-          <a href="/lifecycle" class="btn btn-secondary">View lifecycle</a>
-        </div>
-      </form>
+        <form class="admin-form" id="admin-form">
+          <div id="form-fields"></div>
 
-      <div class="toast" id="toast" role="status"></div>
-    </div>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary">Save &amp; update lifecycle</button>
+            <button type="button" class="btn btn-secondary" id="reset-btn">Reset to defaults</button>
+            <a href="/lifecycle" class="btn btn-secondary">View lifecycle</a>
+          </div>
+        </form>
 
-    <div class="admin-card admin-card--wide">
-      <h2>Transition matrix (arrow rates)</h2>
-      <p>
-        Enter the transition rate (0–100%) for each arrow on the lifecycle diagram.
-        Values appear on the matching arrow after you save. Rows match the current
-        connections on the canvas (including any arrows you added in the editor).
-      </p>
+        <div class="toast" id="toast" role="status"></div>
+      </div>
 
-      <form class="admin-form" id="transition-form">
-        <div class="transition-table-wrap">
-          <table class="transition-table" id="transition-table">
-            <thead>
-              <tr>
-                <th scope="col">From</th>
-                <th scope="col">To</th>
-                <th scope="col">Transition</th>
-                <th scope="col">Rate (%)</th>
-              </tr>
-            </thead>
-            <tbody id="transition-rows"></tbody>
-          </table>
-        </div>
-        <p class="transition-empty" id="transition-empty" hidden>No arrows on the lifecycle canvas yet. Add connections in the editor, save, then return here.</p>
+      <div class="admin-card admin-card--wide">
+        <h2>Transition matrix (arrow rates)</h2>
+        <p>
+          Enter the transition rate (0–100%) for each arrow on the lifecycle diagram.
+          Values appear on the matching arrow after you save. Rows match the current
+          connections on the canvas (including any arrows you added in the editor).
+        </p>
 
-        <div class="actions">
-          <button type="submit" class="btn btn-primary">Save transition rates</button>
-          <button type="button" class="btn btn-secondary" id="clear-rates-btn">Clear all rates</button>
-        </div>
-      </form>
-    </div>
-  </main>
+        <form class="admin-form" id="transition-form">
+          <div class="transition-table-wrap">
+            <table class="transition-table" id="transition-table">
+              <thead>
+                <tr>
+                  <th scope="col">From</th>
+                  <th scope="col">To</th>
+                  <th scope="col">Transition</th>
+                  <th scope="col">Rate (%)</th>
+                </tr>
+              </thead>
+              <tbody id="transition-rows"></tbody>
+            </table>
+          </div>
+          <p class="transition-empty" id="transition-empty" hidden>No arrows on the lifecycle canvas yet. Add connections in the editor, save, then return here.</p>
+
+          <div class="actions">
+            <button type="submit" class="btn btn-primary">Save transition rates</button>
+            <button type="button" class="btn btn-secondary" id="clear-rates-btn">Clear all rates</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
 
   <script src="/static/lifecycle/js/shared.js"></script>
   <script src="/static/lifecycle/js/data-gathering.js"></script>

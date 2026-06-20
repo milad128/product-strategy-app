@@ -3,41 +3,83 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Product Strategy App</title>
+  <title>Dashboard — Product Analytics Backoffice</title>
   {% include 'includes/head-assets.html' %}
 </head>
-<body>
-  {% include 'includes/topbar.html' %}
+<body class="app-shell">
+  {% include 'includes/sidebar.html' %}
 
-  <main class="main">
-    <div class="home-hero">
-      <p class="home-hero__eyebrow">Credit product strategy · v1</p>
-      <h2>Product Strategy App</h2>
-      <p class="home-hero__subtitle">
-        Manage and monitor product strategy for <strong>{{ active_product }}</strong>.
-        Growth equation, metric definitions, and BNPL user lifecycle in one place.
-      </p>
-    </div>
+  <div class="app-main">
+    {% include 'includes/content-header.html' %}
 
-    {% for group in groups %}
-    <section>
-      <h2 class="section-title">{{ group }}</h2>
-      <div class="home-grid">
-        {% for page in pages if page.group == group %}
-        <a href="{{ page.url }}" class="home-card">
-          <span class="home-card__icon" aria-hidden="true">{{ page.icon }}</span>
-          <h3>{{ page.title }}</h3>
-          <p>{{ page.description }}</p>
-          <span class="home-card__link">Open →</span>
-        </a>
+    <main class="main main--dashboard">
+      <section class="dash-stats" aria-label="Overview">
+        {% for stat in stats %}
+        <div class="dash-stat">
+          <span class="dash-stat__label">{{ stat.label }}</span>
+          <span class="dash-stat__value">{{ stat.value }}</span>
+          <span class="dash-stat__hint">{{ stat.hint }}</span>
+        </div>
         {% endfor %}
-      </div>
-    </section>
-    {% endfor %}
+      </section>
 
-    <footer class="page-footer">
-      Active product: {{ active_product }} · BNPL (Secured) and C-Credit planned for future versions.
-    </footer>
-  </main>
+      <section class="dash-panel">
+        <div class="dash-panel__head">
+          <h2 class="dash-panel__title">Workspace modules</h2>
+          <p class="dash-panel__desc">
+            Tools for the product data analyst team — metric definitions, lifecycle modelling, and stage data.
+          </p>
+        </div>
+
+        <div class="dash-table-wrap">
+          <table class="dash-table">
+            <thead>
+              <tr>
+                <th scope="col">Module</th>
+                <th scope="col">Area</th>
+                <th scope="col">Description</th>
+                <th scope="col"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for page in pages %}
+              <tr>
+                <td>
+                  <span class="dash-table__icon" aria-hidden="true">{{ page.icon }}</span>
+                  <strong>{{ page.title }}</strong>
+                </td>
+                <td><span class="dash-table__tag">{{ page.group }}</span></td>
+                <td class="dash-table__desc">{{ page.description }}</td>
+                <td class="dash-table__action">
+                  <a href="{{ page.url }}" class="dash-link">Open</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {% for group in groups %}
+      <section class="dash-panel dash-panel--cards">
+        <h2 class="section-title">{{ group }}</h2>
+        <div class="home-grid">
+          {% for page in pages if page.group == group %}
+          <a href="{{ page.url }}" class="home-card">
+            <span class="home-card__icon" aria-hidden="true">{{ page.icon }}</span>
+            <h3>{{ page.title }}</h3>
+            <p>{{ page.description }}</p>
+            <span class="home-card__link">Open module →</span>
+          </a>
+          {% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+
+      <footer class="page-footer">
+        Product analytics backoffice · {{ active_product }} · BNPL (Secured) and C-Credit planned.
+      </footer>
+    </main>
+  </div>
 </body>
 </html>

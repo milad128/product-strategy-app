@@ -17,6 +17,12 @@
     overflow: hidden;
     font-family: var(--mono);
   }
+  html.presentation-mode,
+  html.presentation-mode body {
+    width: 100%;
+    height: 100%;
+    cursor: default;
+  }
 
   /* ── Step screens (only one visible) ─────────────────────────── */
   .step {
@@ -464,15 +470,28 @@
 
   /* ══ STEP 3 — Missions ════════════════════════════════════════ */
   #stepMission {
+    position: relative;
+    width: 100%;
+    max-width: 100vw;
+    height: 100%;
+    max-height: 100vh;
+    max-height: 100dvh;
     background: transparent;
     color: var(--text);
     flex-direction: column;
-    padding: 20px 28px 24px;
-    gap: 16px;
+    padding: 12px 16px 14px;
+    gap: 10px;
     overflow: hidden;
+    min-height: 0;
   }
-  #stepMission {
-    position: relative;
+  .mission-main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+    width: 100%;
   }
   .victory-overlay {
     position: absolute;
@@ -585,11 +604,14 @@
   .mission-top {
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 16px 24px 18px;
+    padding: 12px 16px 14px;
     background: var(--panel);
     backdrop-filter: blur(var(--glass-blur));
     box-shadow: var(--shadow-panel);
     text-align: center;
+    flex-shrink: 0;
+    width: 100%;
+    min-width: 0;
   }
   .mission-top .badge {
     font-family: var(--sans);
@@ -602,7 +624,7 @@
   }
   .mission-clock {
     font-family: var(--sans);
-    font-size: 52px;
+    font-size: clamp(32px, 4.5vw, 46px);
     font-weight: 700;
     color: var(--cyan);
     letter-spacing: 0.08em;
@@ -618,11 +640,13 @@
   }
   .mission-top-meta {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
-    gap: 28px;
-    margin-top: 10px;
-    font-size: 11px;
-    letter-spacing: 2px;
+    align-items: center;
+    gap: 10px 20px;
+    margin-top: 8px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
     color: var(--text-dim);
   }
   .mission-top-meta .hostile {
@@ -635,6 +659,11 @@
   }
   .phrase-card {
     flex-shrink: 0;
+    min-width: 0;
+  }
+  .phrase-card .mission-card-body {
+    overflow: visible;
+    flex: none;
   }
   .phrase-word.revealed.word-reveal {
     animation: slotReveal 0.6s ease, wordGlow 1.2s ease 0.3s;
@@ -731,10 +760,13 @@
   }
   .mission-panels {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
     flex: 1;
     min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    width: 100%;
   }
   .mission-card {
     border: 1px solid var(--border);
@@ -745,43 +777,69 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
+    max-height: 100%;
     overflow: hidden;
   }
   .mission-card-head {
-    padding: 14px 18px;
+    padding: 10px 14px;
     border-bottom: 1px solid var(--border);
     font-family: var(--sans);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
-    letter-spacing: 0.22em;
+    letter-spacing: 0.18em;
     color: var(--cyan);
     text-transform: uppercase;
+    flex-shrink: 0;
   }
   .mission-card-body {
     flex: 1;
     overflow-y: auto;
-    padding: 10px 12px 14px;
+    overflow-x: hidden;
+    padding: 8px 10px 10px;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mission-board-card .mission-card-body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+  }
+  .mission-board-card .mission-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px 10px 10px;
+    -webkit-overflow-scrolling: touch;
   }
   .lb-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 12px;
+    table-layout: fixed;
   }
   .lb-table th {
     text-align: left;
-    font-size: 10px;
-    letter-spacing: 0.12em;
+    font-size: 9px;
+    letter-spacing: 0.1em;
     color: var(--text-muted);
-    padding: 8px 10px;
+    padding: 6px 8px;
     font-family: var(--sans);
     border-bottom: 1px solid var(--border);
     font-weight: 600;
     text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .lb-table td {
-    padding: 11px 10px;
+    padding: 8px;
     border-bottom: 1px solid rgba(0, 229, 255, 0.08);
     vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .lb-table tr:last-child td { border-bottom: none; }
   .lb-rank {
@@ -793,28 +851,32 @@
   .lb-name {
     font-family: var(--sans);
     font-weight: 600;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .lb-members {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 400;
     letter-spacing: 0;
     color: var(--text-muted);
-    line-height: 1.4;
-    margin-top: 5px;
+    line-height: 1.35;
+    margin-top: 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 280px;
+    max-width: 100%;
   }
   .lb-score {
     text-align: right;
     font-weight: 700;
-    font-size: 18px;
+    font-size: 15px;
     color: var(--cyan);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   .lb-progress {
     text-align: right;
@@ -858,8 +920,8 @@
   .mission-row.active .mission-body { display: block; }
   .mission-head {
     display: grid;
-    grid-template-columns: 44px 1fr auto;
-    gap: 10px;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 8px;
     align-items: center;
   }
   .mission-slot-bar {
@@ -937,15 +999,23 @@
   }
   .mission-row.active .mission-num,
   .mission-row.cleared .mission-num { color: var(--cyan); }
+  .mission-info {
+    min-width: 0;
+    overflow: hidden;
+  }
   .mission-info .meta {
     font-size: 10px;
     color: var(--text-muted);
     letter-spacing: 0.05em;
     margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .mission-status {
     text-align: right;
-    min-width: 88px;
+    min-width: 0;
+    flex-shrink: 0;
   }
   .mission-winners {
     font-size: 10px;
@@ -998,10 +1068,13 @@
   }
   .mission-info .name {
     font-family: var(--sans);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .mission-badge {
     border-radius: 999px;
@@ -1024,6 +1097,27 @@
     background: rgba(16, 185, 129, 0.12);
   }
   .mission-winners span { color: var(--cyan); }
+
+  @media (max-width: 960px) {
+    #stepMission {
+      padding: 10px 12px 12px;
+    }
+    .mission-panels {
+      grid-template-columns: 1fr;
+      grid-template-rows: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    }
+  }
+
+  @media (max-height: 760px) {
+    .mission-top {
+      padding: 8px 12px 10px;
+    }
+    .mission-top .badge { margin-bottom: 4px; }
+    .mission-clock-label { margin-top: 4px; }
+    .mission-card-head {
+      padding: 8px 12px;
+    }
+  }
 </style>
 </head>
 <body class="ai-theme">
@@ -1098,6 +1192,7 @@
     </div>
   </div>
 
+  <div class="mission-main">
   <section class="mission-card phrase-card">
     <div class="mission-card-head">PROTOCOL PHRASE</div>
     <div class="mission-card-body">
@@ -1110,7 +1205,7 @@
       <div class="mission-card-head">LEADERBOARD</div>
       <div class="mission-card-body" id="leaderboardBody"></div>
     </section>
-    <section class="mission-card">
+    <section class="mission-card mission-board-card">
       <div class="mission-card-head">MISSION BOARD</div>
       <div class="mission-card-body">
         <div class="mission-list" id="missionBoard"></div>
@@ -1127,6 +1222,7 @@
         </div>
       </div>
     </section>
+  </div>
   </div>
 
   <div class="victory-overlay" id="victoryOverlay" hidden aria-hidden="true">
@@ -1385,6 +1481,116 @@ function playVictoryCelebrationSound() {
   setTimeout(() => playPhraseRevealSound(), 1400);
 }
 
+function playExplosionSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const master = ctx.createGain();
+    master.gain.value = 0.88;
+    master.connect(ctx.destination);
+    const t = ctx.currentTime;
+
+    const boom = ctx.createOscillator();
+    const boomGain = ctx.createGain();
+    boom.type = 'sine';
+    boom.frequency.setValueAtTime(140, t);
+    boom.frequency.exponentialRampToValueAtTime(24, t + 0.55);
+    boomGain.gain.setValueAtTime(0.0001, t);
+    boomGain.gain.exponentialRampToValueAtTime(0.95, t + 0.018);
+    boomGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    boom.connect(boomGain);
+    boomGain.connect(master);
+    boom.start(t);
+    boom.stop(t + 0.95);
+
+    const crack = ctx.createOscillator();
+    const crackGain = ctx.createGain();
+    crack.type = 'sawtooth';
+    crack.frequency.setValueAtTime(90, t);
+    crack.frequency.exponentialRampToValueAtTime(40, t + 0.25);
+    crackGain.gain.setValueAtTime(0.0001, t);
+    crackGain.gain.exponentialRampToValueAtTime(0.35, t + 0.01);
+    crackGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+    crack.connect(crackGain);
+    crackGain.connect(master);
+    crack.start(t);
+    crack.stop(t + 0.4);
+
+    const len = Math.floor(ctx.sampleRate * 0.7);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.6);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const nGain = ctx.createGain();
+    nGain.gain.setValueAtTime(0.0001, t);
+    nGain.gain.exponentialRampToValueAtTime(0.8, t + 0.012);
+    nGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.65);
+    noise.connect(nGain);
+    nGain.connect(master);
+    noise.start(t);
+    noise.stop(t + 0.7);
+
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+  } catch (_) {}
+}
+
+let ariaDefeatTauntTimer = null;
+
+function speakEnglishLine(text) {
+  return new Promise(async (resolve) => {
+    if (!window.speechSynthesis || !text) {
+      resolve();
+      return;
+    }
+    const voices = await waitForVoices();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'en-US';
+    utter.rate = 0.9;
+    utter.pitch = 0.62;
+    utter.volume = 1;
+    const voice = voices.find(v => v.lang.startsWith('en') && /guy|david|fred|daniel|male/i.test(v.name))
+      || voices.find(v => v.lang.startsWith('en-US'))
+      || voices.find(v => v.lang.startsWith('en'))
+      || getAriaVoice();
+    if (voice) utter.voice = voice;
+    const maxMs = Math.min(120000, text.length * 80 + 3000);
+    const timer = setTimeout(() => resolve(), maxMs);
+    const finish = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    utter.onend = finish;
+    utter.onerror = finish;
+    window.speechSynthesis.speak(utter);
+  });
+}
+
+async function speakAriaDefeatTaunt() {
+  if (ariaAudio) releaseAriaAudio();
+  window.speechSynthesis?.cancel();
+  await speakEnglishLine('Shit');
+  await new Promise(r => setTimeout(r, 380));
+  await speakEnglishLine('shit');
+  await new Promise(r => setTimeout(r, 380));
+  await speakEnglishLine('shit, beginers luck, i will come back soon');
+}
+
+function playAriaDefeatSequence() {
+  if (ariaDefeatTauntTimer) {
+    clearTimeout(ariaDefeatTauntTimer);
+    ariaDefeatTauntTimer = null;
+  }
+  if (ariaAudio) releaseAriaAudio();
+  window.speechSynthesis?.cancel();
+  playExplosionSound();
+  ariaDefeatTauntTimer = setTimeout(() => {
+    ariaDefeatTauntTimer = null;
+    speakAriaDefeatTaunt();
+  }, 3000);
+}
+
 function stopVictoryConfetti() {
   if (victoryConfettiAnimId) {
     cancelAnimationFrame(victoryConfettiAnimId);
@@ -1443,6 +1649,12 @@ function launchVictoryConfetti(durationMs = 12000) {
 
 function hideVictoryCelebration() {
   stopVictoryConfetti();
+  if (ariaDefeatTauntTimer) {
+    clearTimeout(ariaDefeatTauntTimer);
+    ariaDefeatTauntTimer = null;
+  }
+  if (ariaAudio) releaseAriaAudio();
+  window.speechSynthesis?.cancel();
   const overlay = document.getElementById('victoryOverlay');
   if (!overlay) return;
   overlay.classList.remove('show');
@@ -1484,7 +1696,7 @@ function showVictoryCelebration(state) {
   overlay.setAttribute('aria-hidden', 'false');
   overlay.classList.add('show');
   launchVictoryConfetti();
-  playVictoryCelebrationSound();
+  playAriaDefeatSequence();
 
   const hostileEl = document.querySelector('.mission-top-meta .hostile');
   if (hostileEl) hostileEl.textContent = 'ARIA: DEFEATED';
@@ -2461,6 +2673,36 @@ async function poll() {
 }
 
 poll();
+
+function isPresentationMode() {
+  return Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function syncPresentationClass() {
+  document.documentElement.classList.toggle('presentation-mode', isPresentationMode());
+}
+
+async function togglePresentationMode() {
+  try {
+    if (isPresentationMode()) {
+      if (document.exitFullscreen) await document.exitFullscreen();
+      else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+    } else {
+      const root = document.documentElement;
+      if (root.requestFullscreen) await root.requestFullscreen();
+      else if (root.webkitRequestFullscreen) root.webkitRequestFullscreen();
+    }
+  } catch (_) {}
+}
+
+document.addEventListener('fullscreenchange', syncPresentationClass);
+document.addEventListener('webkitfullscreenchange', syncPresentationClass);
+syncPresentationClass();
+
+document.addEventListener('dblclick', (e) => {
+  if (e.target.closest('button, input, select, textarea, a, label, option')) return;
+  togglePresentationMode();
+});
 </script>
 </body>
 </html>

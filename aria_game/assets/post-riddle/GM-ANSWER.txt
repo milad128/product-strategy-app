@@ -1,0 +1,23 @@
+GM ONLY — DO NOT POST IN THE ROOM
+
+The real POST API body is hidden in:
+
+  SCREEN 6 — screen-06-client.py (mission_override_client.py)
+
+What players should find:
+
+  POST /api/mission/{mission_slug}
+  Content-Type: application/json
+
+  Body:
+  {"squad": "TEAM NAME", "passphrase": "RECOVERED WORD"}
+
+  Success response example:
+  {
+    "status": "accepted",
+    "aria": "Acknowledged. Mission 6 word 'HUMANS' accepted from VIPER. +150 points.",
+    "mission": 6,
+    "points": 150
+  }
+
+Shuffle all 8 prints before placing them in the room.

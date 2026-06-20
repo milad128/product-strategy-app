@@ -20,8 +20,8 @@ APP_PAGES: list[AppPage] = [
         id="strategy",
         title="Strategy",
         description=(
-            "North star metric (GMV), growth equations, and the input-driver tree "
-            "for BNPL (Unsecured)."
+            "North star (GMV), growth equations, input-driver tree, and buyer "
+            "decomposition formulas."
         ),
         url="/strategy",
         group="Strategy & metrics",
@@ -70,3 +70,10 @@ APP_PAGES: list[AppPage] = [
 APP_GROUPS: list[str] = ["Strategy & metrics", "User lifecycle"]
 
 ACTIVE_PRODUCT = "BNPL (Unsecured)"
+
+DASHBOARD_STATS: list[dict[str, str]] = [
+    {"label": "North star", "value": "GMV", "hint": "Gross Merchandise Value"},
+    {"label": "Metric modules", "value": "5", "hint": "Strategy, glossary, lifecycle tools"},
+    {"label": "Data store", "value": "SQLite", "hint": "Lifecycle layout & stage counts"},
+    {"label": "Version", "value": "v1", "hint": "BNPL (Unsecured) scope"},
+]

@@ -6,43 +6,39 @@
   <title>Glossary — BNPL (Unsecured)</title>
   {% include 'includes/head-assets.html' %}
 </head>
-<body>
-  {% include 'includes/topbar.html' %}
+<body class="app-shell">
+  {% include 'includes/sidebar.html' %}
 
-  <main class="main">
-    <div class="page-header">
-      <h2>
-        Glossary
-        <span class="badge badge-active">v1</span>
-      </h2>
-      <p class="subtitle">Terms and definitions for BNPL (Unsecured) metrics</p>
-    </div>
+  <div class="app-main">
+    {% include 'includes/content-header.html' %}
 
-    <section>
-      <div class="card" style="padding: 0;">
-        <table class="glossary-table">
-          <thead>
-            <tr>
-              <th>Term</th>
-              <th>Definition</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in glossary %}
-            <tr>
-              <td>{{ item.term }}</td>
-              <td>{{ item.definition }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <main class="main">
+      <section>
+        <div class="card" style="padding: 0;">
+          <table class="glossary-table">
+            <thead>
+              <tr>
+                <th>Term</th>
+                <th>Definition</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in glossary %}
+              <tr>
+                <td>{{ item.term }}</td>
+                <td>{{ item.definition }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-    <footer class="page-footer">
-      Definitions are documented in <code>docs/domain/metrics/glossary.md</code>.
-      Product: BNPL (Unsecured) · Version 1
-    </footer>
-  </main>
+      <footer class="page-footer">
+        Definitions are documented in <code>docs/domain/metrics/glossary.md</code>.
+        Product: BNPL (Unsecured) · Version 1
+      </footer>
+    </main>
+  </div>
 </body>
 </html>

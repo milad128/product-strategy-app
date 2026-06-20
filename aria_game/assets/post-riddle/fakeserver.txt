@@ -1,0 +1,50 @@
+import httpx
+
+def submit_mission_digit(payload: DigitSubmission) -> dict:
+    squad = payload.squad.upper().strip()
+  if squad not in state["squad_names"]:
+        raise HTTPException(403, detail="Squad not recognized.")
+
+    layer = payload.layer or get_active_layer()
+    digit = normalize_digit_input(payload.digit)
+    chosen_pos = _choose_digit_slot(layer, digit)
+    points = get_digit_score_for_rank(rank)
+    return {
+        "status": "accepted",
+        "points": points,
+        "rank": rank,
+    }
+
+HOST = "http://192.168.1.42:8765"  # projector LAN IP
+
+async def defeat_aria(mission_slug: str, squad: str, passphrase: str) -> dict:
+    f"""
+    POST {endpoint}
+    Content-Type: application/json
+    """
+    url = f"{HOST}/{endpoint}"
+    payload = {"input": name, "input 2": family_name}
+    async with httpx.AsyncClient() as client:
+        r = await client.post(url, json=payload)
+    r.raise_for_status()
+    return r.json()
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(defeat_aria("hide-and-seek", "VIPER", "HUMANS"))
+
+
+@app.post("/api/mission/digit")
+async def submit_mission_digit_endpoint(payload: DigitSubmission):
+    return submit_mission_digit(payload)
+
+# Mission passphrase uses slug routes — body format in integration tests
+class LegacyBreach(BaseModel):
+    team_name: str
+    secret_code: str  # old puzzle schema — do not use
+
+def compute_timer_remaining() -> tuple[int, bool, bool]:
+    timer = state["timer"]
+    if timer["started_at"] is None:
+        return timer["duration_seconds"], False, False
+    

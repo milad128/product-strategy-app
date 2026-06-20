@@ -6,10 +6,13 @@
   <title>Import lifecycle data</title>
   {% include 'includes/head-assets.html' %}
 </head>
-<body>
-  {% include 'includes/topbar.html' %}
+<body class="app-shell">
+  {% include 'includes/sidebar.html' %}
 
-  <main class="main main--wide">
+  <div class="app-main">
+    {% include 'includes/content-header.html' %}
+
+    <main class="main main--wide">
     <div class="admin-card">
       <h2>From old lifecycle.html (browser storage)</h2>
       <p>
@@ -51,6 +54,7 @@
       <div class="toast" id="toast" role="status"></div>
     </div>
   </main>
+  </div>
 
   <script src="/static/lifecycle/js/shared.js"></script>
   <script>

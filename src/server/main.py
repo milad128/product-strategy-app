@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, FileSystemLoader
 
-from src.app.home import ACTIVE_PRODUCT, APP_GROUPS, APP_PAGES
+from src.app.home import ACTIVE_PRODUCT, APP_GROUPS, APP_PAGES, DASHBOARD_STATS
 from src.app.lifecycle import storage as lifecycle_storage
 from src.app.lifecycle.import_data import import_lifecycle_data
 from src.db.init_db import init_db
@@ -75,7 +75,12 @@ templates.env.loader = ChoiceLoader(
 
 
 def _page_context(**extra: Any) -> dict[str, Any]:
-    return extra
+    return {
+        "nav_pages": APP_PAGES,
+        "nav_groups": APP_GROUPS,
+        "active_product": ACTIVE_PRODUCT,
+        **extra,
+    }
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -84,11 +89,12 @@ async def home_page(request: Request) -> HTMLResponse:
         request,
         "home.html",
         _page_context(
-            page_title="Product Strategy App",
+            page_title="Dashboard",
             nav_active="home",
+            content_subtitle="Product data analyst workspace — metrics, lifecycle, and stage data.",
             pages=APP_PAGES,
             groups=APP_GROUPS,
-            active_product=ACTIVE_PRODUCT,
+            stats=DASHBOARD_STATS,
         ),
     )
 
@@ -112,6 +118,7 @@ async def strategy_page(request: Request) -> HTMLResponse:
         _page_context(
             page_title="Strategy",
             nav_active="strategy",
+            content_subtitle="Growth equation and input drivers for credit products.",
             products=PRODUCT_LINES,
             north_star=NORTH_STAR,
             equations=GROWTH_EQUATIONS,
@@ -129,6 +136,7 @@ async def glossary_page(request: Request) -> HTMLResponse:
         _page_context(
             page_title="Glossary",
             nav_active="glossary",
+            content_subtitle="Terms and definitions for BNPL (Unsecured) metrics.",
             glossary=GLOSSARY,
         ),
     )
@@ -139,7 +147,12 @@ async def lifecycle_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "lifecycle.html",
-        _page_context(page_title="BNPL User Lifecycle", nav_active="lifecycle"),
+        _page_context(
+            page_title="Lifecycle canvas",
+            nav_active="lifecycle",
+            content_subtitle="Edit the BNPL user lifecycle diagram.",
+            header_compact=True,
+        ),
     )
 
 
@@ -153,7 +166,11 @@ async def data_gathering_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "data-gathering.html",
-        _page_context(page_title="Data gathering", nav_active="data-gathering"),
+        _page_context(
+            page_title="Data gathering",
+            nav_active="data-gathering",
+            content_subtitle="Stage user counts and transition rates for the lifecycle diagram.",
+        ),
     )
 
 
@@ -162,7 +179,11 @@ async def lifecycle_import_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "import.html",
-        _page_context(page_title="Import lifecycle", nav_active="lifecycle"),
+        _page_context(
+            page_title="Import lifecycle",
+            nav_active="lifecycle",
+            content_subtitle="Import layout and counts from browser storage or JSON.",
+        ),
     )
 
 

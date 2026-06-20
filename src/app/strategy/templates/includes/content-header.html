@@ -1,0 +1,11 @@
+<header class="content-header{% if header_compact %} content-header--compact{% endif %}">
+  <div class="content-header__text">
+    {% if content_eyebrow %}
+    <p class="content-header__eyebrow">{{ content_eyebrow }}</p>
+    {% endif %}
+    <h1 class="content-header__title">{{ page_title }}</h1>
+    {% if content_subtitle %}
+    <p class="content-header__subtitle">{{ content_subtitle }}</p>
+    {% endif %}
+  </div>
+</header>

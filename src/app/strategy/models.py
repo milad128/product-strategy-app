@@ -65,7 +65,24 @@ INPUT_DRIVER_TREE = DriverNode(
     id="root",
     name="Input Drivers",
     children=[
-        DriverNode(id="transactions", name="# Transactions"),
+
+        ##DriverNode(id="transactions", name="# Transactions = # purchase request × Purchase Conversion rate"),
+        DriverNode(
+            id="transaction",
+            name="# Transaction",
+            children=[
+                DriverNode(
+                    id="transaction",
+                    name="Credit Spent",
+                    children=[
+                        DriverNode(id="spend_rate", name="Spend Rate"),
+                        DriverNode(id="allocated_credit", name="Allocated credit"),
+                    ],
+                ),
+                DriverNode(id="debit_spent", name="Debit Spent"),
+            ],
+        ),
+        
         DriverNode(
             id="aov",
             name="# AOV",
@@ -87,26 +104,26 @@ INPUT_DRIVER_TREE = DriverNode(
             children=[
                 DriverNode(
                     id="active",
-                    name="Active customer × purchase rate",
+                    name="# Active customer × Active customer purchase rate",
                 ),
-                DriverNode(id="dormant", name="Dormant × purchase rate"),
-                DriverNode(id="soft_churn", name="Soft churn × purchase rate"),
-                DriverNode(id="unactivated", name="Un-Activated × purchase rate"),
+                DriverNode(id="dormant", name="# Dormant × Dormant purchase rate"),
+                DriverNode(id="soft_churn", name="# Soft churn × Soft churn purchase rate"),
+                DriverNode(id="unactivated", name="# Un-Activated × Un-Activated purchase rate"),
                 DriverNode(
                     id="fresh",
-                    name="Fresh credit holder × Activation rate",
+                    name="# Fresh credit holder × Activation rate",
                     children=[
                         DriverNode(
                             id="allocation",
-                            name="Applicant × Allocation rate",
+                            name="# Applicant × Allocation rate",
                         ),
                         DriverNode(
                             id="second_chance",
-                            name="Rejected × Second chance rate",
+                            name="# Rejected × Second chance rate",
                         ),
                         DriverNode(
                             id="revenant",
-                            name="Dead credit holder × Holder revenant rate",
+                            name="# Dead credit holder × Holder revenant rate",
                         ),
                     ],
                 ),
@@ -120,17 +137,17 @@ BUYER_FORMULAS: list[Equation] = [
     Equation(
         label="Buyers decomposition",
         formula=(
-            "# Buyers = (Active × purchase rate) + (Dormant × purchase rate) "
-            "+ (Soft churn × purchase rate) + (Un-Activated × purchase rate) "
-            "+ (Fresh credit holder × Activation rate)"
+            "# Buyers = (# Active × purchase rate) + (# Dormant × purchase rate) "
+            "+ (# Soft churn × purchase rate) + (# Un-Activated × purchase rate) "
+            "+ (# Fresh credit holder × Activation rate)"
         ),
     ),
     Equation(
         label="Fresh credit holder activation",
         formula=(
             "Fresh credit holder = "
-            "(Applicant × Allocation rate) + (Rejected × Second chance rate) "
-            "+ (Dead credit holder × Holder revenant rate)"
+            "(# Applicant × Allocation rate) + (# Rejected × Second chance rate) "
+            "+ (# Dead credit holder × Holder revenant rate)"
         ),
     ),
     Equation(

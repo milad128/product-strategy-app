@@ -825,6 +825,7 @@ function buildPassphraseFields(layers) {
               .includes(active)
               && !editingMission) {
             editingConfig = false;
+            editingStep2Config = false;
           }
         }, 100);
       });
@@ -1034,6 +1035,7 @@ function fillStep2Config(step2) {
           .includes(active)
           && !editingMission) {
         editingConfig = false;
+        editingStep2Config = false;
       }
     }, 100);
   });

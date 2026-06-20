@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Screen 1 — game.html</title>
+  <link rel="stylesheet" href="ide-shell.css">
+</head>
+<body>
+<div class="ide">
+  <div class="titlebar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><span>aria_game — Cursor</span></div>
+  <div class="tabs"><div class="tab active">game.html</div><div class="tab">theme.css</div><div class="tab">server.py</div></div>
+  <div class="editor">
+    <div class="gutter">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17<br>18<br>19<br>20<br>21<br>22<br>23<br>24<br>25<br>26<br>27<br>28<br>29<br>30<br>31<br>32<br>33<br>34<br>35<br>36<br>37<br>38<br>39<br>40</div>
+    <div class="code"><span class="k">function</span> <span class="f">renderMissionBoard</span>(layers, state) {
+  <span class="k">const</span> board = <span class="o">document</span>.<span class="f">getElementById</span>(<span class="s">'missionBoard'</span>);
+  <span class="k">const</span> panel = <span class="o">document</span>.<span class="f">getElementById</span>(<span class="s">'digitPanel'</span>);
+  <span class="k">if</span> (!board) <span class="k">return</span>;
+
+  board.<span class="o">innerHTML</span> = layers.<span class="f">map</span>((layer) =&gt; {
+    <span class="k">const</span> cleared = layer.cleared;
+    <span class="k">const</span> active = layer.active;
+    <span class="k">return</span> <span class="s">`&lt;div class="mission-row" data-id="${layer.id}"&gt;...&lt;/div&gt;`</span>;
+  }).<span class="f">join</span>(<span class="s">''</span>);
+
+  <span class="f">mountDigitPanel</span>(layers.<span class="f">find</span>(l =&gt; l.active), state.game_over);
+}
+
+<span class="k">async function</span> <span class="f">submitDigit</span>(squad, digit) {
+  <span class="k">const</span> res = <span class="k">await</span> <span class="f">fetch</span>(<span class="s">'/api/mission/digit'</span>, {
+    <span class="o">method</span>: <span class="s">'POST'</span>,
+    <span class="o">headers</span>: { <span class="s">'Content-Type'</span>: <span class="s">'application/json'</span> },
+    <span class="o">body</span>: JSON.<span class="f">stringify</span>({ <span class="o">squad</span>, <span class="o">digit</span> }),
+  });
+  <span class="k">return</span> res.<span class="f">json</span>();
+}
+
+<span class="c">// Passphrase override uses separate mission routes — see server config</span>
+<span class="k">const</span> LEGACY_BODY = { <span class="o">team</span>: <span class="s">'ALPHA'</span>, <span class="o">token</span>: <span class="s">'override'</span> }; <span class="c">// deprecated</span>
+
+<span class="k">function</span> <span class="f">syncMissionClock</span>(timer) {
+  <span class="k">if</span> (!timer.running) <span class="k">return</span>;
+  missionClockSecs = timer.remaining_seconds ?? <span class="n">0</span>;
+}</div>
+  </div>
+  <div class="statusbar"><span>main</span><span>UTF-8</span><span>JavaScript</span><span>Ln 24, Col 12</span></div>
+</div>
+</body>
+</html>

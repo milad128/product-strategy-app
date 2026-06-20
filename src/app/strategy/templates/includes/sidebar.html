@@ -1,0 +1,43 @@
+<aside class="sidebar" aria-label="Main navigation">
+  <a href="/" class="sidebar__brand">
+    <span class="sidebar__brand-mark" aria-hidden="true">PA</span>
+    <span class="sidebar__brand-text">
+      <strong>Product Analytics</strong>
+      <small>Backoffice</small>
+    </span>
+  </a>
+
+  <div class="sidebar__product">
+    <span class="sidebar__product-label">Active product</span>
+    <span class="sidebar__product-name">{{ active_product }}</span>
+  </div>
+
+  <nav class="sidebar__nav">
+    <a href="/" class="sidebar__link{% if nav_active == 'home' %} is-active{% endif %}">
+      <span class="sidebar__icon" aria-hidden="true">⌂</span>
+      Dashboard
+    </a>
+
+    {% for group in nav_groups %}
+    <div class="sidebar__section">
+      <p class="sidebar__section-title">{{ group }}</p>
+      {% for page in nav_pages if page.group == group %}
+      <a
+        href="{{ page.url }}"
+        class="sidebar__link{% if nav_active == page.id %} is-active{% endif %}"
+        {% if page.id == 'present' %}target="_blank" rel="noopener"{% endif %}
+      >
+        <span class="sidebar__icon" aria-hidden="true">{{ page.icon }}</span>
+        {{ page.title }}
+      </a>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </nav>
+
+  <div class="sidebar__footer">
+    <span>v1</span>
+    <span class="sidebar__footer-dot" aria-hidden="true">·</span>
+    <span>BNPL Unsecured</span>
+  </div>
+</aside>

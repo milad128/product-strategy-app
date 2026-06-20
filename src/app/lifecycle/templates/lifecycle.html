@@ -7,10 +7,13 @@
   {% include 'includes/head-assets.html' %}
   <link rel="stylesheet" href="/static/lifecycle/css/lifecycle.css" />
 </head>
-<body class="page-canvas">
-  {% include 'includes/topbar.html' %}
+<body class="app-shell app-shell--canvas">
+  {% include 'includes/sidebar.html' %}
 
-  <main class="main main--canvas main--wide">
+  <div class="app-main app-main--canvas">
+    {% include 'includes/content-header.html' %}
+
+    <main class="main main--canvas main--wide">
     <div class="canvas-toolbar" role="toolbar" aria-label="Diagram tools">
       <div class="canvas-toolbar__modes">
         <button type="button" class="tool-btn is-active" data-tool="select" title="Move and resize">
@@ -90,7 +93,8 @@
     </div>
 
     <p class="updated-at" id="updated-at"></p>
-  </main>
+    </main>
+  </div>
 
   <script src="/static/lifecycle/js/shared.js"></script>
   <script src="/static/lifecycle/js/canvas-editor.js"></script>
