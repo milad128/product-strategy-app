@@ -9,10 +9,10 @@ cd "Product Strategy app"
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn src.server.main:app --reload --host 127.0.0.1 --port 8000
+uvicorn src.server.main:app --reload --host 127.0.0.1 --port 8001
 ```
 
-Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+Open [http://127.0.0.1:8001/](http://127.0.0.1:8001/)
 
 | Page | URL |
 |------|-----|

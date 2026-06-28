@@ -40,3 +40,17 @@ class LifecycleCounts(Base):
         onupdate=utcnow,
         nullable=False,
     )
+
+
+class LifecycleCountsMonthly(Base):
+    __tablename__ = "lifecycle_counts_monthly"
+
+    product_code: Mapped[str] = mapped_column(String(64), primary_key=True)
+    month: Mapped[str] = mapped_column(String(6), primary_key=True)
+    data: Mapped[dict] = mapped_column(JSON, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        onupdate=utcnow,
+        nullable=False,
+    )

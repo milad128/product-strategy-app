@@ -13,13 +13,43 @@
     {% include 'includes/content-header.html' %}
 
     <main class="main main--wide">
-      <div class="admin-card">
-        <h2>Stage user counts</h2>
+      <div class="admin-card admin-card--wide">
+        <h2>Import monthly counts</h2>
         <p>
-          Enter the number of users in each stage. Percentages on the lifecycle page are calculated
-          relative to <strong>Applicant User</strong> (100% baseline). Custom stages you add on the
-          lifecycle canvas appear under <strong>Custom stages</strong>.
+          Upload an Excel or CSV file with Jalali months in row 1 and stage names in column A.
+          <a href="/api/lifecycle/counts/import/template" download>Download CSV template</a>
+          or see
+          <code>docs/data-model/lifecycle/monthly-import-format.md</code>.
         </p>
+
+        <form class="admin-form" id="import-form">
+          <div class="field field--file">
+            <label for="counts-file">Monthly lifecycle file (.xlsx or .csv)</label>
+            <input type="file" id="counts-file" accept=".xlsx,.csv" required />
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary" id="import-btn">Import to database</button>
+          </div>
+        </form>
+        <p class="import-hint" id="import-result" hidden></p>
+      </div>
+
+      <div class="admin-card admin-card--wide">
+        <div class="month-toolbar">
+          <div>
+            <h2>Stage user counts</h2>
+            <p>
+              Edit counts for the selected Jalali month. Percentages on the lifecycle page are
+              calculated as each stage’s share of <strong>total users</strong> (sum of all stages minus applicant).
+            </p>
+          </div>
+          <div class="month-picker">
+            <label for="month-select">Month (Jalali)</label>
+            <select id="month-select" disabled>
+              <option value="">No imported months yet</option>
+            </select>
+          </div>
+        </div>
 
         <form class="admin-form" id="admin-form">
           <div id="form-fields"></div>

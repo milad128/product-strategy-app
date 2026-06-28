@@ -3,7 +3,7 @@
  * Read-only presentation when body has class page-present (present.html).
  */
 (async function () {
-  await initLifecycleStorage();
+  const monthsMeta = await initLifecycleStorage();
 
   const IS_PRESENT = document.body.classList.contains("page-present");
   const board = document.getElementById("canvas-board");
@@ -50,6 +50,14 @@
   let connIdCounter = Date.now();
   let customStageCounter = Date.now();
   let isDirty = false;
+
+  let availableMonths = monthsMeta.months || [];
+  let currentMonth = getSelectedMonth();
+
+  const monthNav = document.getElementById("month-nav");
+  const monthLabel = document.getElementById("month-label");
+  const monthPrevBtn = document.getElementById("month-prev");
+  const monthNextBtn = document.getElementById("month-next");
 
   const nodeEls = new Map();
   const groupEls = new Map();
@@ -193,11 +201,13 @@
         '<div class="stage__name">' + escapeHtml(stat.label) + "</div>";
       return;
     }
-    const isBaseline = stat.id === "applicant";
-    el.innerHTML =
+    let html =
       '<div class="stage__name">' + escapeHtml(stat.label) + "</div>" +
-      '<div class="stage__count">' + formatNumber(stat.count) + "</div>" +
-      '<div class="stage__pct">' + (isBaseline ? "100%" : stat.percent) + "</div>";
+      '<div class="stage__count">' + formatNumber(stat.count) + "</div>";
+    if (stat.id !== "applicant" && stat.percent) {
+      html += '<div class="stage__pct">' + stat.percent + "</div>";
+    }
+    el.innerHTML = html;
   }
 
   function rectFromBox(box) {
@@ -233,7 +243,6 @@
       }
       div.style.left = pos.x + "px";
       div.style.top = pos.y + "px";
-      if (stage.id === "applicant") div.classList.add("stage--baseline");
       renderNodeContent(div, byId[stage.id]);
       nodesLayer.appendChild(div);
       nodeEls.set(stage.id, div);
@@ -1849,6 +1858,70 @@
     nodeEls.forEach((el, id) => {
       if (byId[id]) renderNodeContent(el, byId[id]);
     });
+    refreshPresentSummary(counts);
+  }
+
+  function refreshPresentSummary(counts) {
+    if (!IS_PRESENT) return;
+    const panel = document.getElementById("present-summary");
+    if (!panel) return;
+    const data = counts || getCounts(layout);
+    const metrics = calcPresentationMetrics(data, layout);
+    const usersEl = document.getElementById("metric-users");
+    const liveCreditEl = document.getElementById("metric-live-credit-holder");
+    const liveCustomerEl = document.getElementById("metric-live-customer");
+    if (usersEl) usersEl.textContent = formatNumber(metrics.users);
+    if (liveCreditEl) liveCreditEl.textContent = formatNumber(metrics.liveCreditHolder);
+    if (liveCustomerEl) liveCustomerEl.textContent = formatNumber(metrics.liveCustomer);
+  }
+
+  function updateMonthNavUI() {
+    if (!monthNav) return;
+    if (!availableMonths.length) {
+      monthNav.hidden = true;
+      return;
+    }
+    monthNav.hidden = false;
+    if (monthLabel) {
+      monthLabel.textContent = currentMonth ? formatJalaliMonth(currentMonth) : "—";
+    }
+    const idx = currentMonth ? availableMonths.indexOf(currentMonth) : -1;
+    if (monthPrevBtn) monthPrevBtn.disabled = idx <= 0;
+    if (monthNextBtn) monthNextBtn.disabled = idx < 0 || idx >= availableMonths.length - 1;
+  }
+
+  async function loadMonthCounts(month) {
+    if (!month) return;
+    currentMonth = month;
+    setSelectedMonth(month);
+    updateMonthNavUI();
+    const data = await fetchCountsForMonth(month);
+    if (data && typeof data === "object") {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      refreshStats();
+    }
+  }
+
+  async function navigateMonth(delta) {
+    const idx = availableMonths.indexOf(currentMonth);
+    const newIdx = idx + delta;
+    if (newIdx < 0 || newIdx >= availableMonths.length) return;
+    await loadMonthCounts(availableMonths[newIdx]);
+  }
+
+  function initMonthNav() {
+    if (!monthNav || !availableMonths.length) {
+      updateMonthNavUI();
+      return;
+    }
+    currentMonth = getSelectedMonth();
+    if (!currentMonth || !availableMonths.includes(currentMonth)) {
+      currentMonth = monthsMeta.latest || availableMonths[availableMonths.length - 1];
+      setSelectedMonth(currentMonth);
+    }
+    updateMonthNavUI();
+    monthPrevBtn?.addEventListener("click", () => navigateMonth(-1));
+    monthNextBtn?.addEventListener("click", () => navigateMonth(1));
   }
 
   function render() {
@@ -1884,12 +1957,25 @@
     window.addEventListener("resize", schedulePresentFit);
     window.addEventListener("storage", (e) => {
       if (e.key === STORAGE_KEY) refreshStats();
+      if (e.key === SELECTED_MONTH_KEY) {
+        const selected = getSelectedMonth();
+        if (selected && availableMonths.includes(selected) && selected !== currentMonth) {
+          loadMonthCounts(selected);
+        }
+      }
       if (e.key === LAYOUT_STORAGE_KEY) {
         layout = getLayout();
         render();
       }
     });
-    window.addEventListener("focus", refreshStats);
+    window.addEventListener("focus", async () => {
+      const selected = getSelectedMonth();
+      if (selected && availableMonths.includes(selected) && selected !== currentMonth) {
+        await loadMonthCounts(selected);
+      } else {
+        refreshStats();
+      }
+    });
     board.addEventListener("dblclick", () => {
       if (document.fullscreenElement) {
         document.exitFullscreen?.();
@@ -1906,6 +1992,7 @@
         else document.documentElement.requestFullscreen?.();
       }
     });
+    initMonthNav();
     render();
     return;
   }
@@ -2010,6 +2097,12 @@
   );
   window.addEventListener("storage", (e) => {
     if (e.key === STORAGE_KEY) refreshStats();
+    if (e.key === SELECTED_MONTH_KEY) {
+      const selected = getSelectedMonth();
+      if (selected && availableMonths.includes(selected) && selected !== currentMonth) {
+        loadMonthCounts(selected);
+      }
+    }
     if (e.key === LAYOUT_STORAGE_KEY) {
       layout = getLayout();
       buildNodes();
@@ -2022,7 +2115,14 @@
       });
     }
   });
-  window.addEventListener("focus", refreshStats);
+  window.addEventListener("focus", async () => {
+    const selected = getSelectedMonth();
+    if (selected && availableMonths.includes(selected) && selected !== currentMonth) {
+      await loadMonthCounts(selected);
+    } else {
+      refreshStats();
+    }
+  });
 
   handlesLayer?.addEventListener("pointerdown", onHandlePointerDown);
 
@@ -2049,5 +2149,6 @@
   updatePropertiesBar();
   updateSaveButton();
   setMode("select");
+  initMonthNav();
   render();
 })();

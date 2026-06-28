@@ -888,6 +888,64 @@ section > h2,
   margin-top: -0.35rem;
 }
 
+.field--file {
+  grid-template-columns: 1fr;
+}
+
+.field--file input[type="file"] {
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.month-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.month-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 180px;
+}
+
+.month-picker label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.month-picker select {
+  font: inherit;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.import-hint {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+}
+
+.import-hint--success {
+  background: #e8f5e9;
+  color: var(--green);
+}
+
+.import-hint--error {
+  background: #ffebee;
+  color: #c62828;
+}
+
 .transition-table-wrap {
   overflow-x: auto;
   margin-bottom: 0.75rem;

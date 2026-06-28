@@ -6,16 +6,60 @@ const GROUP_LABELS = {
   custom: "Custom stages",
 };
 
-await initLifecycleStorage();
+const monthsMeta = await initLifecycleStorage();
 
 let layout = getLayout();
 const formFields = document.getElementById("form-fields");
 const toast = document.getElementById("toast");
+const monthSelect = document.getElementById("month-select");
+const importResult = document.getElementById("import-result");
 
 function showToast(message, type) {
   toast.textContent = message;
   toast.className = "toast show " + type;
   setTimeout(() => toast.classList.remove("show"), 4000);
+}
+
+function showImportResult(message, isError) {
+  importResult.hidden = false;
+  importResult.textContent = message;
+  importResult.className = "import-hint " + (isError ? "import-hint--error" : "import-hint--success");
+}
+
+function populateMonthPicker(months, selected) {
+  monthSelect.innerHTML = "";
+  if (!months || !months.length) {
+    monthSelect.disabled = true;
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No imported months yet";
+    monthSelect.appendChild(opt);
+    return;
+  }
+  monthSelect.disabled = false;
+  for (const month of months) {
+    const opt = document.createElement("option");
+    opt.value = month;
+    opt.textContent = formatJalaliMonth(month);
+    if (month === selected) opt.selected = true;
+    monthSelect.appendChild(opt);
+  }
+}
+
+async function loadMonth(month) {
+  if (!month) return;
+  setSelectedMonth(month);
+  const data = await fetchCountsForMonth(month);
+  if (data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    buildForm(data);
+  }
+}
+
+function stagePercentHint(counts, stageId) {
+  if (stageId === "applicant") return "";
+  const totalUser = calcTotalUser(counts, layout);
+  return "Share of total users: " + calcPercent(counts[stageId] ?? 0, totalUser);
 }
 
 function buildForm(counts) {
@@ -41,15 +85,12 @@ function buildForm(counts) {
       if (isChannelShape(s.shape)) continue;
       const wrap = document.createElement("div");
       wrap.className = "field";
-      const pct =
-        s.id === "applicant"
-          ? "100% (baseline)"
-          : calcPercent(counts[s.id] ?? 0, counts.applicant || 0);
+      const pct = stagePercentHint(counts, s.id);
       const badge = s.isCustom ? ' <span class="hint">(custom)</span>' : "";
       wrap.innerHTML =
         '<label for="f-' + s.id + '">' + s.label + badge + "</label>" +
         '<input type="number" min="0" step="1" id="f-' + s.id + '" name="' + s.id + '" value="' + (counts[s.id] ?? 0) + '" />' +
-        '<span class="hint">Share of applicants: ' + pct + "</span>";
+        (pct ? '<span class="hint">' + pct + "</span>" : "");
       section.appendChild(wrap);
     }
     if (section.children.length > 1) {
@@ -75,36 +116,95 @@ function refreshHints() {
     const input = document.getElementById("f-" + s.id);
     const hint = input?.closest(".field")?.querySelector(".hint");
     if (!hint) continue;
-    const pct =
-      s.id === "applicant"
-        ? "100% (baseline)"
-        : "Share of applicants: " + calcPercent(counts[s.id], counts.applicant || 0);
+    const pct = stagePercentHint(counts, s.id);
     hint.textContent = pct;
+    hint.hidden = !pct;
   }
 }
+
+let selectedMonth = getSelectedMonth() || monthsMeta.latest || null;
+populateMonthPicker(monthsMeta.months || [], selectedMonth);
 
 let counts = getCounts(layout);
 buildForm(counts);
 
+monthSelect.addEventListener("change", async () => {
+  const month = monthSelect.value;
+  if (!month) return;
+  selectedMonth = month;
+  await loadMonth(month);
+});
+
+document.getElementById("import-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fileInput = document.getElementById("counts-file");
+  const file = fileInput.files?.[0];
+  if (!file) {
+    showImportResult("Choose a file to import.", true);
+    return;
+  }
+
+  const btn = document.getElementById("import-btn");
+  btn.disabled = true;
+  showImportResult("Importing…", false);
+
+  try {
+    const body = new FormData();
+    body.append("file", file);
+    const res = await fetch(API_COUNTS_IMPORT, { method: "POST", body });
+    const payload = await res.json();
+    if (!res.ok) throw new Error(payload.detail || "Import failed");
+
+    selectedMonth = payload.latest_month;
+    setSelectedMonth(selectedMonth);
+    populateMonthPicker(payload.months, selectedMonth);
+    await loadMonth(selectedMonth);
+
+    let msg =
+      "Imported " +
+      payload.imported +
+      " month(s). Latest: " +
+      formatJalaliMonth(payload.latest_month) +
+      ".";
+    if (payload.warnings && payload.warnings.length) {
+      msg += " Warnings: " + payload.warnings.join(" ");
+    }
+    showImportResult(msg, false);
+    showToast("Monthly counts imported.", "success");
+    fileInput.value = "";
+  } catch (err) {
+    showImportResult(String(err.message || err), true);
+    showToast("Import failed.", "info");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 document.getElementById("admin-form").addEventListener("submit", (e) => {
   e.preventDefault();
   counts = readForm();
+  const month = monthSelect.value || selectedMonth;
   if (counts.applicant <= 0) {
-    showToast("Applicant User count must be greater than zero.", "info");
-    return;
+    showToast(
+      "Applicant count is zero — saved anyway. Add applicant when available.",
+      "info"
+    );
   }
-  saveCounts(counts);
+  saveCounts(counts, month);
   for (const s of layout.customStages || []) {
     if (typeof counts[s.id] === "number") s.count = counts[s.id];
   }
   saveLayout(layout);
-  showToast("Saved. Open the Lifecycle page to see updated numbers.", "success");
+  showToast(
+    "Saved for " + (month ? formatJalaliMonth(month) : "current snapshot") + ".",
+    "success"
+  );
 });
 
 document.getElementById("reset-btn").addEventListener("click", () => {
   if (!confirm("Reset all stage counts to the default sample numbers?")) return;
   counts = getDefaultCounts(layout);
-  saveCounts(counts);
+  saveCounts(counts, monthSelect.value || selectedMonth);
   buildForm(counts);
   showToast("Reset to default values.", "success");
 });

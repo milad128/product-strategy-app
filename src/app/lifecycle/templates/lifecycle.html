@@ -14,6 +14,12 @@
     {% include 'includes/content-header.html' %}
 
     <main class="main main--canvas main--wide">
+    <div class="month-nav" id="month-nav" hidden aria-label="Month navigation">
+      <button type="button" class="month-nav__btn" id="month-prev" aria-label="Previous month" disabled>‹</button>
+      <span class="month-nav__label" id="month-label">—</span>
+      <button type="button" class="month-nav__btn" id="month-next" aria-label="Next month" disabled>›</button>
+    </div>
+
     <div class="canvas-toolbar" role="toolbar" aria-label="Diagram tools">
       <div class="canvas-toolbar__modes">
         <button type="button" class="tool-btn is-active" data-tool="select" title="Move and resize">

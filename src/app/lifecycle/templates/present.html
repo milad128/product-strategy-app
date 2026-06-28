@@ -9,15 +9,41 @@
 </head>
 <body class="page-present">
   <main class="present-main">
-    <div class="canvas-board present-board" id="canvas-board" title="Double-click for fullscreen">
-      <div class="present-scaler" id="present-scaler">
-        <div class="canvas-board__inner">
-          <div class="canvas-groups" id="canvas-groups"></div>
-          <svg class="canvas-svg" id="canvas-svg" aria-hidden="true"></svg>
-          <div class="canvas-labels" id="canvas-labels" aria-hidden="true"></div>
-          <div class="canvas-nodes" id="canvas-nodes"></div>
+    <div class="month-nav month-nav--present" id="month-nav" hidden aria-label="Month navigation">
+      <button type="button" class="month-nav__btn" id="month-prev" aria-label="Previous month" disabled>‹</button>
+      <span class="month-nav__label" id="month-label">—</span>
+      <button type="button" class="month-nav__btn" id="month-next" aria-label="Next month" disabled>›</button>
+    </div>
+
+    <div class="present-layout">
+      <div class="canvas-board present-board" id="canvas-board" title="Double-click for fullscreen">
+        <div class="present-scaler" id="present-scaler">
+          <div class="canvas-board__inner">
+            <div class="canvas-groups" id="canvas-groups"></div>
+            <svg class="canvas-svg" id="canvas-svg" aria-hidden="true"></svg>
+            <div class="canvas-labels" id="canvas-labels" aria-hidden="true"></div>
+            <div class="canvas-nodes" id="canvas-nodes"></div>
+          </div>
         </div>
       </div>
+
+      <aside class="present-summary" id="present-summary" aria-label="Lifecycle summary">
+        <h2 class="present-summary__title">Summary</h2>
+        <dl class="present-summary__list">
+          <div class="present-summary__row">
+            <dt>Users</dt>
+            <dd id="metric-users">—</dd>
+          </div>
+          <div class="present-summary__row">
+            <dt>Live credit holder</dt>
+            <dd id="metric-live-credit-holder">—</dd>
+          </div>
+          <div class="present-summary__row">
+            <dt>Live customer</dt>
+            <dd id="metric-live-customer">—</dd>
+          </div>
+        </dl>
+      </aside>
     </div>
   </main>
 

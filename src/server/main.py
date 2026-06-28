@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from typing import Any
+from typing import Any, Optional
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, FileSystemLoader
@@ -31,6 +31,9 @@ from src.app.strategy.models import (
 ROOT = Path(__file__).resolve().parents[2]
 STRATEGY_DIR = ROOT / "src" / "app" / "strategy"
 LIFECYCLE_DIR = ROOT / "src" / "app" / "lifecycle"
+MONTHLY_COUNTS_TEMPLATE = (
+    ROOT / "docs" / "data-model" / "lifecycle" / "monthly-lifecycle-counts-template.csv"
+)
 
 
 @asynccontextmanager
@@ -201,18 +204,56 @@ async def put_lifecycle_layout(payload: dict[str, Any]) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
+@app.get("/api/lifecycle/counts/months")
+async def get_lifecycle_count_months() -> JSONResponse:
+    months = lifecycle_storage.list_count_months()
+    return JSONResponse({"months": months, "latest": months[-1] if months else None})
+
+
 @app.get("/api/lifecycle/counts")
-async def get_lifecycle_counts() -> JSONResponse:
-    data = lifecycle_storage.load_counts()
+async def get_lifecycle_counts(month: Optional[str] = Query(default=None)) -> JSONResponse:
+    data = lifecycle_storage.load_counts(month=month)
     if data is None:
         raise HTTPException(status_code=404, detail="No saved counts")
     return JSONResponse(data)
 
 
 @app.put("/api/lifecycle/counts")
-async def put_lifecycle_counts(payload: dict[str, Any]) -> JSONResponse:
-    lifecycle_storage.save_counts(payload)
-    return JSONResponse({"status": "ok"})
+async def put_lifecycle_counts(
+    payload: dict[str, Any],
+    month: Optional[str] = Query(default=None),
+) -> JSONResponse:
+    if month and (not month.isdigit() or len(month) != 6):
+        raise HTTPException(status_code=400, detail="month must be Jalali YYYYMM")
+    lifecycle_storage.save_counts(payload, month=month)
+    return JSONResponse({"status": "ok", "month": month})
+
+
+@app.get("/api/lifecycle/counts/import/template")
+async def get_lifecycle_counts_import_template() -> FileResponse:
+    if not MONTHLY_COUNTS_TEMPLATE.is_file():
+        raise HTTPException(status_code=404, detail="Template file not found.")
+    return FileResponse(
+        MONTHLY_COUNTS_TEMPLATE,
+        media_type="text/csv",
+        filename="monthly-lifecycle-counts-template.csv",
+    )
+
+
+@app.post("/api/lifecycle/counts/import")
+async def post_lifecycle_counts_import(
+    file: UploadFile = File(...),
+) -> JSONResponse:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Missing filename")
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty file")
+    try:
+        result = lifecycle_storage.import_monthly_counts_file(file.filename, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(result)
 
 
 @app.post("/api/lifecycle/import")

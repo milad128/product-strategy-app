@@ -1,7 +1,10 @@
 const STORAGE_KEY = "bnpl-lifecycle-data";
 const LAYOUT_STORAGE_KEY = "bnpl-lifecycle-layout";
+const SELECTED_MONTH_KEY = "bnpl-lifecycle-selected-month";
 const API_LAYOUT = "/api/lifecycle/layout";
 const API_COUNTS = "/api/lifecycle/counts";
+const API_COUNTS_MONTHS = "/api/lifecycle/counts/months";
+const API_COUNTS_IMPORT = "/api/lifecycle/counts/import";
 const DEFAULT_CONN_LABEL = "Flow rate";
 const ARROW_STRAIGHT = "straight";
 const ARROW_BENT = "bent";
@@ -240,6 +243,39 @@ function getDefaultCounts(layout) {
   return counts;
 }
 
+function formatJalaliMonth(code) {
+  if (!code || code.length !== 6) return code || "—";
+  return code.slice(0, 4) + " / " + code.slice(4, 6);
+}
+
+function getSelectedMonth() {
+  return localStorage.getItem(SELECTED_MONTH_KEY);
+}
+
+function setSelectedMonth(month) {
+  if (month) localStorage.setItem(SELECTED_MONTH_KEY, month);
+  else localStorage.removeItem(SELECTED_MONTH_KEY);
+}
+
+async function fetchAvailableMonths() {
+  try {
+    const res = await fetch(API_COUNTS_MONTHS);
+    if (!res.ok) return { months: [], latest: null };
+    return res.json();
+  } catch {
+    return { months: [], latest: null };
+  }
+}
+
+async function fetchCountsForMonth(month) {
+  const url = month
+    ? API_COUNTS + "?month=" + encodeURIComponent(month)
+    : API_COUNTS;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  return res.json();
+}
+
 function getCounts(layout) {
   const baseLayout = layout || { customStages: [] };
   try {
@@ -259,31 +295,46 @@ function getCounts(layout) {
   }
 }
 
-function saveCounts(counts) {
+function saveCounts(counts, month) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(counts));
-  persistCountsToServer(counts);
+  persistCountsToServer(counts, month || getSelectedMonth());
 }
 
 async function initLifecycleStorage() {
   try {
-    const [layoutRes, countsRes] = await Promise.all([
-      fetch(API_LAYOUT),
-      fetch(API_COUNTS),
-    ]);
+    const layoutRes = await fetch(API_LAYOUT);
     if (layoutRes.ok) {
       const data = await layoutRes.json();
       if (data && typeof data === "object" && Object.keys(data).length > 0) {
         localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(mergeLayout(data)));
       }
     }
+
+    const monthsMeta = await fetchAvailableMonths();
+    if (monthsMeta.months && monthsMeta.months.length > 0) {
+      let selected = getSelectedMonth();
+      if (!selected || !monthsMeta.months.includes(selected)) {
+        selected = monthsMeta.latest || monthsMeta.months[monthsMeta.months.length - 1];
+        setSelectedMonth(selected);
+      }
+      const monthCounts = await fetchCountsForMonth(selected);
+      if (monthCounts && typeof monthCounts === "object") {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(monthCounts));
+        return monthsMeta;
+      }
+    }
+
+    const countsRes = await fetch(API_COUNTS);
     if (countsRes.ok) {
       const data = await countsRes.json();
       if (data && typeof data === "object" && Object.keys(data).length > 0) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       }
     }
+    return monthsMeta;
   } catch (err) {
     console.warn("Database unavailable, using browser localStorage.", err);
+    return { months: [], latest: null };
   }
 }
 
@@ -297,8 +348,12 @@ function persistLayoutToServer(layout) {
   });
 }
 
-function persistCountsToServer(counts) {
-  return fetch(API_COUNTS, {
+function persistCountsToServer(counts, month) {
+  const selected = month || getSelectedMonth();
+  const url = selected
+    ? API_COUNTS + "?month=" + encodeURIComponent(selected)
+    : API_COUNTS;
+  return fetch(url, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(counts),
@@ -311,17 +366,39 @@ function formatNumber(n) {
   return new Intl.NumberFormat("en-US").format(Math.round(n));
 }
 
-function calcPercent(count, applicantTotal) {
-  if (!applicantTotal || applicantTotal <= 0) return "0%";
-  return ((count / applicantTotal) * 100).toFixed(1) + "%";
+function calcTotalUser(counts, layout) {
+  const baseLayout = layout || { customStages: [] };
+  let sum = 0;
+  for (const s of getAllStages(baseLayout)) {
+    sum += counts[s.id] ?? 0;
+  }
+  return Math.max(0, sum - (counts.applicant ?? 0));
+}
+
+function calcPresentationMetrics(counts, layout) {
+  return {
+    users: calcTotalUser(counts, layout),
+    liveCreditHolder:
+      (counts.freshCreditHolder ?? 0) + (counts.unActivatedCreditHolder ?? 0),
+    liveCustomer:
+      (counts.activeCustomer ?? 0) +
+      (counts.dormantCustomer ?? 0) +
+      (counts.softChurned ?? 0),
+  };
+}
+
+function calcPercent(count, totalUser) {
+  if (!totalUser || totalUser <= 0) return "0%";
+  return ((count / totalUser) * 100).toFixed(1) + "%";
 }
 
 function getStageStats(counts, layout) {
-  const applicant = counts.applicant || 0;
-  return getAllStages(layout).map((s) => ({
+  const baseLayout = layout || { customStages: [] };
+  const totalUser = calcTotalUser(counts, baseLayout);
+  return getAllStages(baseLayout).map((s) => ({
     ...s,
     count: counts[s.id] ?? 0,
-    percent: calcPercent(counts[s.id] ?? 0, applicant),
+    percent: s.id === "applicant" ? "" : calcPercent(counts[s.id] ?? 0, totalUser),
   }));
 }
 
