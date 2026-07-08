@@ -281,13 +281,13 @@ function getCounts(layout) {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const counts = getDefaultCounts(baseLayout);
+    for (const s of baseLayout.customStages || []) {
+      if (typeof s.count === "number" && s.count >= 0) counts[s.id] = s.count;
+    }
     if (!raw) return counts;
     const parsed = JSON.parse(raw);
     for (const id of Object.keys(counts)) {
       if (typeof parsed[id] === "number" && parsed[id] >= 0) counts[id] = parsed[id];
-    }
-    for (const s of baseLayout.customStages || []) {
-      if (typeof s.count === "number" && s.count >= 0) counts[s.id] = s.count;
     }
     return counts;
   } catch {

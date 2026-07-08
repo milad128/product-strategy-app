@@ -8,12 +8,18 @@ import re
 from typing import Any
 
 STAGE_LABEL_TO_ID: dict[str, str] = {
+    "abandoned": "abandoned",
     "abandoned_user": "abandoned",
     "active_customer": "activeCustomer",
+    "active_customer_6m": "activeCustomer",
+    "active_customer_1m": "custom-1783425377379",
     "dead_credit_holder": "deadCreditHolder",
     "dead_closed_customer": "creditClosed",
+    "dead_customer": "creditClosed",
     "dormant_customer": "dormantCustomer",
+    "dormant_credit_holder": "dormantCustomer",
     "fresh_credit_holder": "freshCreditHolder",
+    "rejected": "rejected",
     "rejected_user": "rejected",
     "soft_churn_customer": "softChurned",
     "unactivated_credit_holder": "unActivatedCreditHolder",
