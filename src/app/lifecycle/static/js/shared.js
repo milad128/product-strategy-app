@@ -384,6 +384,8 @@ function calcPresentationMetrics(counts, layout) {
       (counts.activeCustomer ?? 0) +
       (counts.dormantCustomer ?? 0) +
       (counts.softChurned ?? 0),
+    activeCustomer:
+      (counts["custom-1783425377379"] ?? 0) + (counts.activeCustomer ?? 0),
   };
 }
 

@@ -1870,9 +1870,11 @@
     const usersEl = document.getElementById("metric-users");
     const liveCreditEl = document.getElementById("metric-live-credit-holder");
     const liveCustomerEl = document.getElementById("metric-live-customer");
+    const activeCustomerEl = document.getElementById("metric-active-customer");
     if (usersEl) usersEl.textContent = formatNumber(metrics.users);
     if (liveCreditEl) liveCreditEl.textContent = formatNumber(metrics.liveCreditHolder);
     if (liveCustomerEl) liveCustomerEl.textContent = formatNumber(metrics.liveCustomer);
+    if (activeCustomerEl) activeCustomerEl.textContent = formatNumber(metrics.activeCustomer);
   }
 
   function updateMonthNavUI() {
