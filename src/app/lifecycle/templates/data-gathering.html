@@ -12,36 +12,66 @@
   <div class="app-main">
     {% include 'includes/content-header.html' %}
 
-    <main class="main main--wide">
-      <div class="admin-card admin-card--wide">
-        <h2>Import monthly counts</h2>
-        <p>
-          Upload an Excel or CSV file with Jalali months in row 1 and stage names in column A.
-          <a href="/api/lifecycle/counts/import/template" download>Download CSV template</a>
-          or see
-          <code>docs/data-model/lifecycle/monthly-import-format.md</code>.
-        </p>
+    <main class="main main--wide dg-page">
+      <p class="dg-intro">
+        Import stage counts and transition-rate data, then review and fine-tune it for a
+        specific month below. Everything here feeds the <a href="/lifecycle">Lifecycle</a> diagram.
+      </p>
 
-        <form class="admin-form" id="import-form">
-          <div class="field field--file">
-            <label for="counts-file">Monthly lifecycle file (.xlsx or .csv)</label>
-            <input type="file" id="counts-file" accept=".xlsx,.csv" required />
-          </div>
-          <div class="actions">
-            <button type="submit" class="btn btn-primary" id="import-btn">Import to database</button>
-          </div>
-        </form>
-        <p class="import-hint" id="import-result" hidden></p>
-      </div>
-
-      <div class="admin-card admin-card--wide">
-        <div class="month-toolbar">
-          <div>
-            <h2>Stage user counts</h2>
+      <section class="dg-section">
+        <h2 class="dg-section__title"><span class="dg-section__step">1</span> Import data</h2>
+        <div class="dg-import-grid">
+          <div class="admin-card">
+            <h3>Monthly stage counts</h3>
             <p>
-              Edit counts for the selected Jalali month. Percentages on the lifecycle page are
-              calculated as each stage’s share of <strong>total users</strong> (sum of all stages minus applicant).
+              Excel or CSV with Jalali months in row 1 and stage names in column A.
+              <a href="/api/lifecycle/counts/import/template" download>Download CSV template</a>
+              or see <code>docs/data-model/lifecycle/monthly-import-format.md</code>.
             </p>
+
+            <form class="admin-form" id="import-form">
+              <div class="field field--file">
+                <label for="counts-file">File (.xlsx or .csv)</label>
+                <input type="file" id="counts-file" accept=".xlsx,.csv" required />
+              </div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary" id="import-btn">Import to database</button>
+              </div>
+            </form>
+            <p class="import-hint" id="import-result" hidden></p>
+          </div>
+
+          <div class="admin-card">
+            <h3>Transition matrix (per month)</h3>
+            <p>
+              An <code>avg_transition_probs_&lt;YYYYMM&gt;.xlsx</code> file — a 10×10 stage
+              transition matrix (row = origin stage the month before, column = destination
+              stage in <strong>YYYYMM</strong>). Cells with no matching arrow on the canvas
+              are ignored — no new arrows are created.
+            </p>
+
+            <form class="admin-form" id="transition-import-form">
+              <div class="field field--file">
+                <label for="transition-file">File (.xlsx)</label>
+                <input type="file" id="transition-file" accept=".xlsx" required />
+              </div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary" id="transition-import-btn">Import to database</button>
+              </div>
+            </form>
+            <p class="import-hint" id="transition-import-result" hidden></p>
+            <p class="dg-months-list" id="transition-months-list"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="dg-section">
+        <h2 class="dg-section__title"><span class="dg-section__step">2</span> Review &amp; edit a month</h2>
+
+        <div class="month-toolbar month-toolbar--sticky">
+          <div>
+            <span class="month-toolbar__label">Reviewing month</span>
+            <p class="month-toolbar__hint">Drives both the stage counts form and the transition-rate table below.</p>
           </div>
           <div class="month-picker">
             <label for="month-select">Month (Jalali)</label>
@@ -51,49 +81,59 @@
           </div>
         </div>
 
-        <form class="admin-form" id="admin-form">
-          <div id="form-fields"></div>
+        <div class="admin-card admin-card--wide">
+          <h3>Stage user counts</h3>
+          <p>
+            Percentages on the lifecycle page are each stage's share of
+            <strong>total users</strong> (sum of all stages minus applicant).
+          </p>
 
-          <div class="actions">
-            <button type="submit" class="btn btn-primary">Save &amp; update lifecycle</button>
-            <button type="button" class="btn btn-secondary" id="reset-btn">Reset to defaults</button>
-            <a href="/lifecycle" class="btn btn-secondary">View lifecycle</a>
-          </div>
-        </form>
+          <form class="admin-form" id="admin-form">
+            <div id="form-fields"></div>
 
-        <div class="toast" id="toast" role="status"></div>
-      </div>
+            <div class="actions">
+              <button type="submit" class="btn btn-primary">Save &amp; update lifecycle</button>
+              <button type="button" class="btn btn-secondary" id="reset-btn">Reset to defaults</button>
+              <a href="/lifecycle" class="btn btn-secondary">View lifecycle</a>
+            </div>
+          </form>
 
-      <div class="admin-card admin-card--wide">
-        <h2>Transition matrix (arrow rates)</h2>
-        <p>
-          Enter the transition rate (0–100%) for each arrow on the lifecycle diagram.
-          Values appear on the matching arrow after you save. Rows match the current
-          connections on the canvas (including any arrows you added in the editor).
-        </p>
+          <div class="toast" id="toast" role="status"></div>
+        </div>
 
-        <form class="admin-form" id="transition-form">
-          <div class="transition-table-wrap">
-            <table class="transition-table" id="transition-table">
-              <thead>
-                <tr>
-                  <th scope="col">From</th>
-                  <th scope="col">To</th>
-                  <th scope="col">Transition</th>
-                  <th scope="col">Rate (%)</th>
-                </tr>
-              </thead>
-              <tbody id="transition-rows"></tbody>
-            </table>
-          </div>
-          <p class="transition-empty" id="transition-empty" hidden>No arrows on the lifecycle canvas yet. Add connections in the editor, save, then return here.</p>
+        <div class="admin-card admin-card--wide">
+          <h3>Transition matrix (arrow rates)</h3>
+          <p>
+            Rows match the current connections on the canvas. "Imported (month)" shows the
+            rate from an imported transition-matrix file for the month selected above — it
+            drives the lifecycle diagram directly and needs no saving. "Rate (%)" is a flat
+            manual fallback used when no imported value exists for the selected month.
+          </p>
 
-          <div class="actions">
-            <button type="submit" class="btn btn-primary">Save transition rates</button>
-            <button type="button" class="btn btn-secondary" id="clear-rates-btn">Clear all rates</button>
-          </div>
-        </form>
-      </div>
+          <form class="admin-form" id="transition-form">
+            <div class="transition-table-wrap">
+              <table class="transition-table" id="transition-table">
+                <thead>
+                  <tr>
+                    <th scope="col">From</th>
+                    <th scope="col">To</th>
+                    <th scope="col">Transition</th>
+                    <th scope="col">Imported (month)</th>
+                    <th scope="col">Rate (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="transition-rows"></tbody>
+              </table>
+            </div>
+            <p class="transition-empty" id="transition-empty" hidden>No arrows on the lifecycle canvas yet. Add connections in the editor, save, then return here.</p>
+
+            <div class="actions">
+              <button type="submit" class="btn btn-primary">Save transition rates</button>
+              <button type="button" class="btn btn-secondary" id="clear-rates-btn">Clear all rates</button>
+            </div>
+          </form>
+        </div>
+      </section>
     </main>
   </div>
 

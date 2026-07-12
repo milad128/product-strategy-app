@@ -492,6 +492,18 @@
   font-variant-numeric: tabular-nums;
 }
 
+.month-nav__rates-badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(61, 111, 217, 0.12);
+  color: #3d6fd9;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
 .month-nav--present {
   position: absolute;
   top: 1rem;
@@ -971,6 +983,30 @@
 }
 
 .canvas-handles .conn-handle:active {
+  cursor: grabbing;
+}
+
+.canvas-handles .conn-handle--segment {
+  border-radius: 3px;
+  border-color: #3b82f6;
+  background: #eaf2ff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.canvas-handles .conn-handle--seg-h {
+  width: 22px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.canvas-handles .conn-handle--seg-v {
+  width: 8px;
+  height: 22px;
+  cursor: ew-resize;
+}
+
+.canvas-handles .conn-handle--seg-h:active,
+.canvas-handles .conn-handle--seg-v:active {
   cursor: grabbing;
 }
 

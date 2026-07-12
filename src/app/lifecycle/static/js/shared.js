@@ -5,6 +5,9 @@ const API_LAYOUT = "/api/lifecycle/layout";
 const API_COUNTS = "/api/lifecycle/counts";
 const API_COUNTS_MONTHS = "/api/lifecycle/counts/months";
 const API_COUNTS_IMPORT = "/api/lifecycle/counts/import";
+const API_TRANSITION_PROBS = "/api/lifecycle/transition-probs";
+const API_TRANSITION_PROBS_MONTHS = "/api/lifecycle/transition-probs/months";
+const API_TRANSITION_PROBS_IMPORT = "/api/lifecycle/transition-probs/import";
 const DEFAULT_CONN_LABEL = "Flow rate";
 const ARROW_STRAIGHT = "straight";
 const ARROW_BENT = "bent";
@@ -173,10 +176,14 @@ function formatTransitionRate(rate) {
   return rate.toFixed(1) + "%";
 }
 
-/** Arrow label text: transition name + optional rate line */
+/** Arrow label text: transition name + optional rate line.
+ * `monthTransitionRate` (a per-selected-month overlay derived from an
+ * imported transition-probability file, set transiently by the canvas —
+ * never persisted) takes priority over the flat manually-entered rate. */
 function formatConnectionLabel(conn) {
   const name = conn.label || DEFAULT_CONN_LABEL;
-  const pct = formatTransitionRate(conn.transitionRate);
+  const rate = conn.monthTransitionRate != null ? conn.monthTransitionRate : conn.transitionRate;
+  const pct = formatTransitionRate(rate);
   return pct ? name + "\n" + pct : name;
 }
 
@@ -274,6 +281,28 @@ async function fetchCountsForMonth(month) {
   const res = await fetch(url);
   if (!res.ok) return null;
   return res.json();
+}
+
+async function fetchTransitionProbMonths() {
+  try {
+    const res = await fetch(API_TRANSITION_PROBS_MONTHS);
+    if (!res.ok) return { months: [], latest: null };
+    return res.json();
+  } catch {
+    return { months: [], latest: null };
+  }
+}
+
+/** { from_stage_id: { to_stage_id: probability(0-1) } } for a month, or null if none saved. */
+async function fetchTransitionProbsForMonth(month) {
+  if (!month) return null;
+  try {
+    const res = await fetch(API_TRANSITION_PROBS + "?month=" + encodeURIComponent(month));
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }
 
 function getCounts(layout) {

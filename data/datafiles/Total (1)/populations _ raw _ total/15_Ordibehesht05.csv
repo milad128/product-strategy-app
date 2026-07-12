@@ -1,0 +1,9 @@
+segment,140502,140503
+abandoned,36506,29603
+active_customer_1m,55747,40078
+active_customer_6m,437,41168
+dead_credit_holder,150,990
+dead_customer,18,46
+fresh_credit_holder,111092,30174
+rejected,124479,94522
+unactivated_credit_holder,2271,94119

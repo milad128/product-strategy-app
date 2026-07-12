@@ -8,14 +8,15 @@ from sqlalchemy import select
 
 from src.app.lifecycle.layout_defaults import merge_layout
 from src.app.lifecycle.monthly_import import parse_monthly_file
+from src.app.lifecycle.transition_import import parse_transition_probs_xlsx
 from src.db.database import SessionLocal
 from src.db.models import (
     DEFAULT_PRODUCT_CODE,
     LifecycleCounts,
     LifecycleCountsMonthly,
     LifecycleLayout,
+    LifecycleTransitionProbsMonthly,
 )
-
 
 def load_layout(product_code: str = DEFAULT_PRODUCT_CODE) -> dict[str, Any] | None:
     with SessionLocal() as session:
@@ -149,3 +150,84 @@ def reset_layout_to_defaults(product_code: str = DEFAULT_PRODUCT_CODE) -> dict[s
     merged = merge_layout(None)
     save_layout(merged, product_code=product_code)
     return merged
+
+
+def list_transition_prob_months(product_code: str = DEFAULT_PRODUCT_CODE) -> list[str]:
+    with SessionLocal() as session:
+        rows = session.scalars(
+            select(LifecycleTransitionProbsMonthly.month)
+            .where(LifecycleTransitionProbsMonthly.product_code == product_code)
+            .order_by(LifecycleTransitionProbsMonthly.month)
+        ).all()
+        return list(rows)
+
+
+def load_transition_probs_month(
+    month: str,
+    product_code: str = DEFAULT_PRODUCT_CODE,
+) -> dict[str, Any] | None:
+    with SessionLocal() as session:
+        row = session.get(LifecycleTransitionProbsMonthly, (product_code, month))
+        return dict(row.data) if row else None
+
+
+def save_transition_probs_month(
+    month: str,
+    matrix: dict[str, Any],
+    product_code: str = DEFAULT_PRODUCT_CODE,
+) -> None:
+    with SessionLocal() as session:
+        row = session.get(LifecycleTransitionProbsMonthly, (product_code, month))
+        if row is None:
+            session.add(
+                LifecycleTransitionProbsMonthly(
+                    product_code=product_code, month=month, data=matrix
+                )
+            )
+        else:
+            row.data = matrix
+        session.commit()
+
+
+def _match_existing_connections(
+    layout: dict[str, Any], matrix: dict[str, dict[str, float]]
+) -> tuple[int, int]:
+    """Count matrix cells that do / don't correspond to an existing arrow
+    on the canvas. Cells with no matching arrow are left out of the saved
+    matrix entirely — they never get drawn and never show a rate."""
+    existing = {(c["from"], c["to"]) for c in layout.get("connections", [])}
+    matched = 0
+    skipped = 0
+    for from_id, targets in list(matrix.items()):
+        for to_id in list(targets.keys()):
+            pair = (f"stage:{from_id}", f"stage:{to_id}")
+            if pair in existing:
+                matched += 1
+            else:
+                skipped += 1
+                del targets[to_id]
+        if not targets:
+            del matrix[from_id]
+    return matched, skipped
+
+
+def import_transition_probs_file(
+    filename: str,
+    data: bytes,
+    product_code: str = DEFAULT_PRODUCT_CODE,
+) -> dict[str, Any]:
+    month, matrix = parse_transition_probs_xlsx(filename, data)
+    if not matrix:
+        raise ValueError("No recognized stage transitions found in file.")
+
+    layout = load_layout(product_code=product_code) or merge_layout(None)
+    matched, skipped = _match_existing_connections(layout, matrix)
+
+    save_transition_probs_month(month, matrix, product_code=product_code)
+
+    return {
+        "status": "ok",
+        "month": month,
+        "pairs": matched,
+        "skipped_pairs": skipped,
+    }

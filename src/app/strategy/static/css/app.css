@@ -810,6 +810,62 @@ section > h2,
   color: var(--purple);
 }
 
+/* —— Data gathering page shell —— */
+.dg-page {
+  max-width: 1100px;
+}
+
+.dg-intro {
+  font-size: 0.9rem;
+  color: var(--muted);
+  max-width: 720px;
+  margin: 0 0 1.75rem;
+}
+
+.dg-section {
+  margin-bottom: 2.25rem;
+}
+
+.dg-section__title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.dg-section__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--purple);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.dg-import-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.dg-import-grid .admin-card {
+  max-width: none;
+  margin: 0;
+}
+
+.dg-months-list {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 /* —— Forms & admin (data gathering) —— */
 .admin-card {
   background: var(--card);
@@ -822,10 +878,11 @@ section > h2,
 }
 
 .admin-card--wide {
-  max-width: 960px;
+  max-width: none;
 }
 
-.admin-card h2 {
+.admin-card h2,
+.admin-card h3 {
   font-size: 1rem;
   margin-bottom: 0.25rem;
   font-weight: 600;
@@ -906,6 +963,31 @@ section > h2,
   margin-bottom: 1rem;
 }
 
+.month-toolbar--sticky {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 5;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 4px 14px rgba(30, 36, 51, 0.08);
+  align-items: center;
+}
+
+.month-toolbar__label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.month-toolbar__hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 .month-picker {
   display: flex;
   flex-direction: column;
@@ -981,6 +1063,12 @@ section > h2,
 .transition-table__name {
   color: var(--muted);
   font-size: 0.8rem;
+}
+
+.transition-table__imported {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #3d6fd9;
 }
 
 .transition-rate-input {

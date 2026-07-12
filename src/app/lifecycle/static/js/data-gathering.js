@@ -54,6 +54,7 @@ async function loadMonth(month) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     buildForm(data);
   }
+  await loadTransitionMatrixForMonth(month);
 }
 
 function stagePercentHint(counts, stageId) {
@@ -211,9 +212,91 @@ document.getElementById("reset-btn").addEventListener("click", () => {
 
 formFields.addEventListener("input", refreshHints);
 
+const transitionImportForm = document.getElementById("transition-import-form");
+const transitionImportResult = document.getElementById("transition-import-result");
+const transitionMonthsList = document.getElementById("transition-months-list");
+
+function showTransitionImportResult(message, isError) {
+  transitionImportResult.hidden = false;
+  transitionImportResult.textContent = message;
+  transitionImportResult.className = "import-hint " + (isError ? "import-hint--error" : "import-hint--success");
+}
+
+async function refreshTransitionMonthsList() {
+  const meta = await fetchTransitionProbMonths();
+  const months = meta.months || [];
+  transitionMonthsList.textContent = months.length
+    ? "Imported months: " + months.map(formatJalaliMonth).join(", ")
+    : "No transition matrix files imported yet.";
+}
+
+transitionImportForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fileInput = document.getElementById("transition-file");
+  const file = fileInput.files?.[0];
+  if (!file) {
+    showTransitionImportResult("Choose a file to import.", true);
+    return;
+  }
+
+  const btn = document.getElementById("transition-import-btn");
+  btn.disabled = true;
+  showTransitionImportResult("Importing…", false);
+
+  try {
+    const body = new FormData();
+    body.append("file", file);
+    const res = await fetch(API_TRANSITION_PROBS_IMPORT, { method: "POST", body });
+    const payload = await res.json();
+    if (!res.ok) throw new Error(payload.detail || "Import failed");
+
+    showTransitionImportResult(
+      "Imported " +
+        formatJalaliMonth(payload.month) +
+        ": " +
+        payload.pairs +
+        " transition rate(s) matched to existing arrows" +
+        (payload.skipped_pairs
+          ? " (" + payload.skipped_pairs + " cell(s) skipped — no matching arrow on the canvas)"
+          : "") +
+        ".",
+      false
+    );
+    showToast("Transition matrix imported.", "success");
+    fileInput.value = "";
+    layout = getLayout();
+    await refreshTransitionMonthsList();
+
+    // Jump the month picker to the month just imported (if counts exist
+    // for it) so the "Imported (month)" column shows it right away.
+    const hasOption = [...monthSelect.options].some((o) => o.value === payload.month);
+    if (hasOption) {
+      monthSelect.value = payload.month;
+      selectedMonth = payload.month;
+      await loadMonth(payload.month);
+    } else {
+      await loadTransitionMatrixForMonth(selectedMonth);
+    }
+  } catch (err) {
+    showTransitionImportResult(String(err.message || err), true);
+    showToast("Import failed.", "info");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+refreshTransitionMonthsList();
+
 const transitionRows = document.getElementById("transition-rows");
 const transitionEmpty = document.getElementById("transition-empty");
 const transitionForm = document.getElementById("transition-form");
+
+let currentTransitionMatrix = null;
+
+async function loadTransitionMatrixForMonth(month) {
+  currentTransitionMatrix = await fetchTransitionProbsForMonth(month);
+  buildTransitionTable();
+}
 
 function sortedConnections() {
   return [...layout.connections].sort((a, b) => {
@@ -238,10 +321,19 @@ function buildTransitionTable() {
       c.transitionRate != null && Number.isFinite(c.transitionRate)
         ? c.transitionRate
         : "";
+    const fromEp = parseEndpoint(c.from);
+    const toEp = parseEndpoint(c.to);
+    const importedProb =
+      currentTransitionMatrix && fromEp?.type === EP_STAGE && toEp?.type === EP_STAGE
+        ? currentTransitionMatrix[fromEp.id]?.[toEp.id]
+        : null;
+    const importedText =
+      typeof importedProb === "number" ? formatTransitionRate(importedProb * 100) : "—";
     tr.innerHTML =
       "<td>" + getEndpointLabel(layout, c.from) + "</td>" +
       "<td>" + getEndpointLabel(layout, c.to) + "</td>" +
       '<td class="transition-table__name">' + (c.label || DEFAULT_CONN_LABEL) + "</td>" +
+      '<td class="transition-table__imported">' + importedText + "</td>" +
       '<td><input type="number" min="0" max="100" step="0.1" class="transition-rate-input" data-conn-id="' +
       c.id +
       '" value="' +
@@ -262,6 +354,7 @@ function readTransitionRates() {
 }
 
 buildTransitionTable();
+loadTransitionMatrixForMonth(selectedMonth);
 
 transitionForm.addEventListener("submit", (e) => {
   e.preventDefault();

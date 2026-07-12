@@ -4,6 +4,7 @@
  */
 (async function () {
   const monthsMeta = await initLifecycleStorage();
+  const transitionProbMonthsMeta = await fetchTransitionProbMonths();
 
   const IS_PRESENT = document.body.classList.contains("page-present");
   const board = document.getElementById("canvas-board");
@@ -53,9 +54,11 @@
 
   let availableMonths = monthsMeta.months || [];
   let currentMonth = getSelectedMonth();
+  const transitionProbMonths = transitionProbMonthsMeta.months || [];
 
   const monthNav = document.getElementById("month-nav");
   const monthLabel = document.getElementById("month-label");
+  const monthRatesBadge = document.getElementById("month-rates-badge");
   const monthPrevBtn = document.getElementById("month-prev");
   const monthNextBtn = document.getElementById("month-next");
 
@@ -1029,6 +1032,20 @@
     }
   }
 
+  /** Inverse of anchorOnBorder: given a point already on `side` of rect, return its 0..1 offset. */
+  function offsetFromBorderPoint(rect, side, pt) {
+    switch (side) {
+      case "top":
+      case "bottom":
+        return rect.width ? clamp01((pt.x - rect.left) / rect.width) : 0.5;
+      case "left":
+      case "right":
+        return rect.height ? clamp01((pt.y - rect.top) / rect.height) : 0.5;
+      default:
+        return 0.5;
+    }
+  }
+
   function pickAnchors(fromRect, toRect) {
     const dx = toRect.cx - fromRect.cx;
     const dy = toRect.cy - fromRect.cy;
@@ -1162,6 +1179,34 @@
     conn.waypoints = pts.slice(1, -1).map((p) => ({ x: p.x, y: p.y }));
   }
 
+  /** true only if every consecutive pair of points forms a right angle (shares x or y exactly) */
+  function isPathOrthogonal(points) {
+    for (let i = 0; i < points.length - 1; i++) {
+      const dx = Math.abs(points[i].x - points[i + 1].x);
+      const dy = Math.abs(points[i].y - points[i + 1].y);
+      if (dx > 0.5 && dy > 0.5) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Re-anchored box rects can differ by a fraction of a pixel between
+   * rendering contexts (edit mode measures via getBoundingClientRect,
+   * present mode via the always-integer-rounded offsetWidth/Height). That
+   * sub-pixel drift must never be allowed to touch the interior waypoints
+   * the user actually saved — so the two segments that touch the anchors
+   * are snapped onto the current anchor coordinate for THIS render only,
+   * without mutating conn.waypoints.
+   */
+  function snapAnchorTouchingSegments(pts, fromSide, toSide) {
+    if (pts.length < 3) return;
+    const fromHoriz = fromSide === "left" || fromSide === "right";
+    const toHoriz = toSide === "left" || toSide === "right";
+    pts[1][fromHoriz ? "y" : "x"] = pts[0][fromHoriz ? "y" : "x"];
+    const last = pts.length - 1;
+    pts[last - 1][toHoriz ? "y" : "x"] = pts[last][toHoriz ? "y" : "x"];
+  }
+
   function resolveConnectionPoints(conn) {
     const fromR = getEndpointRect(conn.from);
     const toR = getEndpointRect(conn.to);
@@ -1171,7 +1216,21 @@
       return [from, to];
     }
     if (conn.waypoints && conn.waypoints.length) {
-      return [from, ...conn.waypoints.map((p) => ({ x: p.x, y: p.y })), to];
+      const pts = [from, ...conn.waypoints.map((p) => ({ x: p.x, y: p.y })), to];
+      snapAnchorTouchingSegments(pts, fromSide, toSide);
+      if (isPathOrthogonal(pts)) return pts;
+      // Only genuinely malformed interior waypoints (saved before
+      // orthogonal routing was enforced) reach here — repair once by
+      // falling back to a clean auto-routed path where every angle is a
+      // right angle. This never fires for a path that's just fine except
+      // for cross-context anchor rounding, since that's already handled
+      // above.
+      const fresh = routePath(from, to, fromSide, toSide);
+      if (!IS_PRESENT) {
+        conn.waypoints = fresh.slice(1, -1).map((p) => ({ x: p.x, y: p.y }));
+        markDirty();
+      }
+      return fresh;
     }
     return routePath(from, to, fromSide, toSide);
   }
@@ -1198,8 +1257,34 @@
     return Math.hypot(p.x - px, p.y - py);
   }
 
+  const CONN_CORNER_RADIUS = 10;
+
+  /** Straight segments with each interior corner softened into a small curve. */
   function pointsToPath(points) {
-    return points.map((p, i) => (i === 0 ? "M" : "L") + p.x + " " + p.y).join(" ");
+    if (points.length < 3) {
+      return points.map((p, i) => (i === 0 ? "M" : "L") + p.x + " " + p.y).join(" ");
+    }
+    let d = "M" + points[0].x + " " + points[0].y;
+    for (let i = 1; i < points.length - 1; i++) {
+      const prev = points[i - 1];
+      const cur = points[i];
+      const next = points[i + 1];
+      const d1 = Math.hypot(cur.x - prev.x, cur.y - prev.y) || 1;
+      const d2 = Math.hypot(next.x - cur.x, next.y - cur.y) || 1;
+      const r = Math.min(CONN_CORNER_RADIUS, d1 / 2, d2 / 2);
+      const a = {
+        x: cur.x + ((prev.x - cur.x) / d1) * r,
+        y: cur.y + ((prev.y - cur.y) / d1) * r,
+      };
+      const b = {
+        x: cur.x + ((next.x - cur.x) / d2) * r,
+        y: cur.y + ((next.y - cur.y) / d2) * r,
+      };
+      d += " L" + a.x + " " + a.y + " Q" + cur.x + " " + cur.y + " " + b.x + " " + b.y;
+    }
+    const last = points[points.length - 1];
+    d += " L" + last.x + " " + last.y;
+    return d;
   }
 
   function labelPosition(points) {
@@ -1279,6 +1364,11 @@
     }
   }
 
+  /** true if the segment points[i]->points[i+1] runs left-right (shared y) */
+  function isSegmentHorizontal(points, i) {
+    return Math.abs(points[i].y - points[i + 1].y) < 0.5;
+  }
+
   function drawConnectionHandles(conn, points) {
     if (IS_PRESENT || !handlesLayer || conn.id !== selectedConnId || mode !== "select") {
       if (handlesLayer) handlesLayer.innerHTML = "";
@@ -1289,24 +1379,43 @@
 
     points.forEach((pt, idx) => {
       const isEndpoint = idx === 0 || idx === points.length - 1;
-      if (!isEndpoint && isStraightConn(conn)) return;
+      if (!isEndpoint) return;
 
       const displayPt = getHandleDisplayPosition(conn, pt, idx, points.length);
       const handle = document.createElement("div");
-      handle.className =
-        "conn-handle" + (isEndpoint ? " conn-handle--endpoint" : " conn-handle--bend");
+      handle.className = "conn-handle conn-handle--endpoint";
       handle.setAttribute("data-conn-id", conn.id);
-      handle.setAttribute("data-handle-type", isEndpoint ? (idx === 0 ? "start" : "end") : "bend");
-      if (!isEndpoint) handle.setAttribute("data-bend-index", String(idx - 1));
+      handle.setAttribute("data-handle-type", idx === 0 ? "start" : "end");
       handle.style.left = displayPt.x + "px";
       handle.style.top = displayPt.y + "px";
-      handle.title = isEndpoint
-        ? idx === 0
-          ? "Drag along stage border or to another stage"
-          : "Drag along stage border or to another stage"
-        : "Drag to move bend · double-click line to add another";
+      handle.title = "Drag along stage border or to another stage";
       handlesLayer.appendChild(handle);
     });
+
+    // Orthogonal segment handles — dragging one slides the whole straight
+    // run (this segment plus any collinear neighbors) perpendicular to
+    // itself, so the line always stays axis-aligned (no diagonals).
+    if (!isStraightConn(conn)) {
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i];
+        const b = points[i + 1];
+        const length = Math.hypot(b.x - a.x, b.y - a.y);
+        if (length < 4) continue;
+        const horizontal = isSegmentHorizontal(points, i);
+        const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        const handle = document.createElement("div");
+        handle.className =
+          "conn-handle conn-handle--segment " +
+          (horizontal ? "conn-handle--seg-h" : "conn-handle--seg-v");
+        handle.setAttribute("data-conn-id", conn.id);
+        handle.setAttribute("data-handle-type", "segment");
+        handle.setAttribute("data-seg-index", String(i));
+        handle.style.left = mid.x + "px";
+        handle.style.top = mid.y + "px";
+        handle.title = "Drag to move this line";
+        handlesLayer.appendChild(handle);
+      }
+    }
   }
 
   function updateConnectionGraphics(connId) {
@@ -1336,17 +1445,7 @@
     }
 
     if (connId === selectedConnId && handlesLayer) {
-      const handles = handlesLayer.querySelectorAll(
-        '.conn-handle[data-conn-id="' + connId + '"]'
-      );
-      points.forEach((pt, idx) => {
-        const h = handles[idx];
-        if (h) {
-          const displayPt = getHandleDisplayPosition(conn, pt, idx, points.length);
-          h.style.left = displayPt.x + "px";
-          h.style.top = displayPt.y + "px";
-        }
-      });
+      drawConnectionHandles(conn, points);
     }
   }
 
@@ -1682,6 +1781,16 @@
     drawConnections();
   }
 
+  function closestPointOnSegment(p, a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy;
+    if (len2 === 0) return { x: a.x, y: a.y };
+    let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    return { x: a.x + t * dx, y: a.y + t * dy };
+  }
+
   function addWaypointAt(conn, clientX, clientY) {
     if (isStraightConn(conn)) return;
     ensureWaypoints(conn);
@@ -1696,11 +1805,102 @@
         bestSeg = i;
       }
     }
+    // Snap onto the segment itself so the insert never introduces a
+    // diagonal — the new point starts collinear and becomes a draggable
+    // corner once the user pulls one of its two (now orthogonal) sides.
+    const onLine = closestPointOnSegment(pt, points[bestSeg], points[bestSeg + 1]);
     if (!conn.waypoints) conn.waypoints = [];
     const insertAt = Math.max(0, Math.min(bestSeg, conn.waypoints.length));
-    conn.waypoints.splice(insertAt, 0, { x: Math.round(pt.x), y: Math.round(pt.y) });
+    conn.waypoints.splice(insertAt, 0, { x: Math.round(onLine.x), y: Math.round(onLine.y) });
     markDirty();
     drawConnections();
+  }
+
+  /**
+   * Drag segment `segIndex` (points[i] -> points[i+1]) perpendicular to its
+   * own orientation by (dx, dy) in board units. Any neighboring segments
+   * that are collinear with it (same orientation) move along with it, so a
+   * whole straight run slides as one piece and every segment stays either
+   * perfectly horizontal or perfectly vertical.
+   */
+  function dragConnectionSegment(conn, segIndex, dx, dy) {
+    const fromR = getEndpointRect(conn.from);
+    const toR = getEndpointRect(conn.to);
+    if (!fromR || !toR) return;
+    ensureWaypoints(conn);
+    const points = resolveConnectionPoints(conn);
+    if (segIndex < 0 || segIndex >= points.length - 1) return;
+
+    const horizontal = isSegmentHorizontal(points, segIndex);
+    const axisDelta = horizontal ? dy : dx;
+    if (!axisDelta) return;
+
+    let lo = segIndex;
+    let hi = segIndex + 1;
+    while (
+      lo > 0 &&
+      (horizontal
+        ? Math.abs(points[lo - 1].y - points[lo].y) < 0.5
+        : Math.abs(points[lo - 1].x - points[lo].x) < 0.5)
+    ) {
+      lo--;
+    }
+    while (
+      hi < points.length - 1 &&
+      (horizontal
+        ? Math.abs(points[hi].y - points[hi + 1].y) < 0.5
+        : Math.abs(points[hi].x - points[hi + 1].x) < 0.5)
+    ) {
+      hi++;
+    }
+
+    const lastIdx = points.length - 1;
+    for (let k = lo; k <= hi; k++) {
+      if (horizontal) points[k].y += axisDelta;
+      else points[k].x += axisDelta;
+
+      if (k === 0) {
+        conn.fromAnchor = conn.fromAnchor || getEndpointSide(conn, true);
+        conn.fromOffset = offsetFromBorderPoint(fromR, conn.fromAnchor, points[0]);
+      } else if (k === lastIdx) {
+        conn.toAnchor = conn.toAnchor || getEndpointSide(conn, false);
+        conn.toOffset = offsetFromBorderPoint(toR, conn.toAnchor, points[lastIdx]);
+      } else {
+        conn.waypoints[k - 1] = { x: points[k].x, y: points[k].y };
+      }
+    }
+  }
+
+  /**
+   * After the start/end circle handle is dragged, the anchor point moves
+   * but the nearest waypoint doesn't — re-align that one waypoint onto the
+   * anchor's new coordinate so the segment touching the anchor stays
+   * orthogonal instead of turning into a diagonal line.
+   */
+  function realignEndpointNeighbor(conn, isStart) {
+    if (isStraightConn(conn)) return;
+    const fromR = getEndpointRect(conn.from);
+    const toR = getEndpointRect(conn.to);
+    if (!fromR || !toR) return;
+    ensureWaypoints(conn);
+    const points = resolveConnectionPoints(conn);
+    if (points.length < 3) return;
+
+    const anchorIdx = isStart ? 0 : points.length - 1;
+    const neighborIdx = isStart ? 1 : points.length - 2;
+    if (neighborIdx === anchorIdx) return;
+    const side = isStart ? conn.fromAnchor : conn.toAnchor;
+    const horizontal = side === "left" || side === "right";
+    const coord = horizontal ? "y" : "x";
+    points[neighborIdx][coord] = points[anchorIdx][coord];
+
+    if (neighborIdx === 0) {
+      conn.fromOffset = offsetFromBorderPoint(fromR, conn.fromAnchor, points[0]);
+    } else if (neighborIdx === points.length - 1) {
+      conn.toOffset = offsetFromBorderPoint(toR, conn.toAnchor, points[neighborIdx]);
+    } else {
+      conn.waypoints[neighborIdx - 1] = { x: points[neighborIdx].x, y: points[neighborIdx].y };
+    }
   }
 
   function onHandlePointerDown(e) {
@@ -1718,14 +1918,15 @@
       selectConnection(connId);
     }
 
-    if (type === "bend") {
+    if (type === "segment") {
       ensureWaypoints(conn);
     }
 
     handleDrag = {
       connId,
       type,
-      bendIndex: type === "bend" ? Number(handle.getAttribute("data-bend-index")) : -1,
+      segIndex: type === "segment" ? Number(handle.getAttribute("data-seg-index")) : -1,
+      lastBoardPt: clientToBoard(e.clientX, e.clientY),
       pointerId: e.pointerId,
     };
 
@@ -1743,15 +1944,15 @@
     const pt = clientToBoard(e.clientX, e.clientY);
 
     if (handleDrag.type === "start" || handleDrag.type === "end") {
-      const ep =
-        findEndpointAtPoint(pt) ||
-        (handleDrag.type === "start" ? conn.from : conn.to);
-      setEndpointFromPoint(conn, handleDrag.type === "start", pt, ep);
-    } else if (handleDrag.type === "bend") {
-      ensureWaypoints(conn);
-      if (conn.waypoints[handleDrag.bendIndex]) {
-        conn.waypoints[handleDrag.bendIndex] = { x: pt.x, y: pt.y };
-      }
+      const isStart = handleDrag.type === "start";
+      const ep = findEndpointAtPoint(pt) || (isStart ? conn.from : conn.to);
+      setEndpointFromPoint(conn, isStart, pt, ep);
+      realignEndpointNeighbor(conn, isStart);
+    } else if (handleDrag.type === "segment") {
+      const dx = pt.x - handleDrag.lastBoardPt.x;
+      const dy = pt.y - handleDrag.lastBoardPt.y;
+      dragConnectionSegment(conn, handleDrag.segIndex, dx, dy);
+      handleDrag.lastBoardPt = pt;
     }
 
     updateConnectionGraphics(handleDrag.connId);
@@ -1887,9 +2088,33 @@
     if (monthLabel) {
       monthLabel.textContent = currentMonth ? formatJalaliMonth(currentMonth) : "—";
     }
+    if (monthRatesBadge) {
+      monthRatesBadge.hidden = !(currentMonth && transitionProbMonths.includes(currentMonth));
+    }
     const idx = currentMonth ? availableMonths.indexOf(currentMonth) : -1;
     if (monthPrevBtn) monthPrevBtn.disabled = idx <= 0;
     if (monthNextBtn) monthNextBtn.disabled = idx < 0 || idx >= availableMonths.length - 1;
+  }
+
+  /**
+   * Overlay the selected month's imported transition-matrix rates onto
+   * matching connectors (conn.monthTransitionRate — transient, never
+   * persisted). File values are named by their target month, e.g.
+   * avg_transition_probs_140401 holds the rates observed going *into*
+   * 140401, so this is what should show while 140401 is selected.
+   */
+  async function applyTransitionProbsForMonth(month) {
+    const matrix = month ? await fetchTransitionProbsForMonth(month) : null;
+    for (const conn of layout.connections) {
+      const fromEp = parseEndpoint(conn.from);
+      const toEp = parseEndpoint(conn.to);
+      const rate =
+        matrix && fromEp?.type === EP_STAGE && toEp?.type === EP_STAGE
+          ? matrix[fromEp.id]?.[toEp.id]
+          : null;
+      conn.monthTransitionRate = typeof rate === "number" ? rate * 100 : null;
+    }
+    drawConnections();
   }
 
   async function loadMonthCounts(month) {
@@ -1902,6 +2127,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       refreshStats();
     }
+    await applyTransitionProbsForMonth(month);
   }
 
   async function navigateMonth(delta) {
@@ -1996,6 +2222,7 @@
     });
     initMonthNav();
     render();
+    applyTransitionProbsForMonth(currentMonth);
     return;
   }
 
@@ -2153,4 +2380,5 @@
   setMode("select");
   initMonthNav();
   render();
+  applyTransitionProbsForMonth(currentMonth);
 })();

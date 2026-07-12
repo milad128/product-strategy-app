@@ -256,6 +256,38 @@ async def post_lifecycle_counts_import(
     return JSONResponse(result)
 
 
+@app.get("/api/lifecycle/transition-probs/months")
+async def get_lifecycle_transition_prob_months() -> JSONResponse:
+    months = lifecycle_storage.list_transition_prob_months()
+    return JSONResponse({"months": months, "latest": months[-1] if months else None})
+
+
+@app.get("/api/lifecycle/transition-probs")
+async def get_lifecycle_transition_probs(
+    month: str = Query(...),
+) -> JSONResponse:
+    data = lifecycle_storage.load_transition_probs_month(month)
+    if data is None:
+        raise HTTPException(status_code=404, detail="No transition probabilities for that month")
+    return JSONResponse(data)
+
+
+@app.post("/api/lifecycle/transition-probs/import")
+async def post_lifecycle_transition_probs_import(
+    file: UploadFile = File(...),
+) -> JSONResponse:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Missing filename")
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty file")
+    try:
+        result = lifecycle_storage.import_transition_probs_file(file.filename, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(result)
+
+
 @app.post("/api/lifecycle/import")
 async def post_lifecycle_import(payload: dict[str, Any]) -> JSONResponse:
     try:
